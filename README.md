@@ -3,14 +3,14 @@
 The working hall of the Provincial Ministry of Civil and Administrative Affairs (Keizaal Online).
 
 - **Public pages** — The Hall and the Notice Board. Anyone can read them.
-- **Staff pages** — Clerk Desk, Writs & Forms, office pages, Docket, Archives search and Manuals. Staff sign in with Discord.
+- **Staff pages** — Clerk Desk, Writs & Forms, office pages, Docket, Archives search and Manuals. Staff sign in with a username and password issued by the Minister.
 - **Filing** — a filled form is written as a Skyrim-styled Google Doc, numbered (Petition I, II, III…), placed in the right Drive folder, and entered in a live Docket sheet.
-- **Minister's Study** — connect the Google archives and see who may enter.
+- **Minister's Study** — enter officers on the rolls, reset passwords, suspend or remove them, and connect the Google archives.
 
 ## Deploying on Railway
 
 1. **New Project → Deploy from GitHub repo** and pick this repository.
-2. **Add a volume** to the service, mounted at `/data` (keeps the Google connection and Docket sheet id across deploys).
+2. **Add a volume** to the service, mounted at `/data`. It holds the officer accounts, the Google connection and the Docket sheet id, so nothing is lost on redeploy.
 3. **Generate a domain** under Settings → Networking, then set the variables below.
 
 | Variable | Value |
@@ -19,18 +19,15 @@ The working hall of the Provincial Ministry of Civil and Administrative Affairs 
 | `SESSION_SECRET` | Any long random string |
 | `DATA_DIR` | `/data` |
 | `NODE_ENV` | `production` |
-| `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | From your Discord application |
-| `ADMIN_DISCORD_IDS` | Comma-separated Discord user IDs of the Minister(s) |
-| `STAFF_DISCORD_IDS` | Comma-separated Discord user IDs of staff |
+| `ADMIN_USERNAME` | Username for the first Minister account, e.g. `nimmi` |
+| `ADMIN_PASSWORD` | Password for that account (10+ characters). Used only when no accounts exist yet |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | From your Google Cloud OAuth client |
 
-Optional: `DISCORD_GUILD_ID` with `DISCORD_STAFF_ROLE_IDS` / `DISCORD_ADMIN_ROLE_IDS` to admit staff by Discord server role instead of listing IDs. `MINISTER_NAME`, `CURRENT_YEAR` (default 226), and `FOLDER_*` to point at different Drive folders.
+Optional: `MINISTER_NAME`, `CURRENT_YEAR` (default 226), and `FOLDER_*` to point at different Drive folders.
 
-## Discord application
+## Officer accounts
 
-1. <https://discord.com/developers/applications> → **New Application**.
-2. **OAuth2 → Redirects** → add `BASE_URL/auth/discord/callback`.
-3. Copy the Client ID and Client Secret into Railway.
+The first Minister account is created from `ADMIN_USERNAME` / `ADMIN_PASSWORD` on first start. After that, add officers in **Minister's Study → Enter a New Officer**. Each gets a temporary password shown once, and must choose their own at first entry. Forgotten passwords are reset from the same page.
 
 ## Google connection
 
@@ -46,7 +43,5 @@ The first connection creates **Ministry Administrative Docket (Live)** in *Ledge
 
 ```
 npm install
-DEV_LOGIN=1 npm start
+ADMIN_USERNAME=nimmi ADMIN_PASSWORD=choose-a-long-password npm start
 ```
-
-`DEV_LOGIN=1` adds test sign-in buttons on the Staff Entrance page. It is ignored when `NODE_ENV=production`.

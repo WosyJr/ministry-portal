@@ -5,6 +5,7 @@ const cookieSession = require('cookie-session');
 const C = require('./lib/config');
 const V = require('./lib/views');
 const A = require('./lib/auth');
+const U = require('./lib/users');
 const G = require('./lib/google');
 const { BY_KEY } = require('./lib/forms');
 const { DEPTS } = require('./lib/content');
@@ -20,7 +21,11 @@ app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 
 app.use((req, res, next) => {
   if (!req.session.csrf) req.session.csrf = crypto.randomBytes(18).toString('hex');
-  res.locals.user = req.session.user || null;
+  if (req.session.user) {
+    const cur = U.find(req.session.user.username);
+    if (!cur || cur.active === false) req.session.user = null;
+    else req.session.user = { username: cur.username, name: cur.name, office: cur.office || '', role: cur.role, mustChange: !!cur.mustChange };
+  }
   res.page = (opts, status) => {
     const flash = req.session.flash; req.session.flash = null;
     res.status(status || 200).send(V.layout({ user: req.session.user, csrf: req.session.csrf, flash: opts.flash || flash, ...opts }));
@@ -56,32 +61,35 @@ app.get('/notices', async (req, res) => {
 
 app.get('/login', (req, res) => {
   if (A.isStaff(req.session.user)) return res.redirect('/staff');
-  res.page({ title: 'Staff Entrance', body: V.loginPage(A.discordConfigured(), C.DEV_LOGIN) });
+  res.page({ title: 'Staff Entrance', body: V.loginPage(req.session.csrf) });
 });
-app.get('/auth/discord', (req, res) => {
-  if (!A.discordConfigured()) return res.redirect('/login');
-  res.redirect(A.loginUrl(req));
+app.post('/login', checkCsrf, (req, res) => {
+  const username = String(req.body.username || '').slice(0, 40);
+  const key = (req.ip || '') + '|' + username.toLowerCase();
+  const wait = A.throttled(key);
+  if (wait) return res.page({ title: 'Staff Entrance', body: V.loginPage(req.session.csrf, `Too many attempts. Wait ${wait} seconds and try again.`, username) }, 429);
+  const user = U.authenticate(username, String(req.body.password || ''));
+  if (!user) { A.failed(key); return res.page({ title: 'Staff Entrance', body: V.loginPage(req.session.csrf, 'That name and password do not match the rolls.', username) }, 401); }
+  A.succeeded(key);
+  const to = req.session.returnTo; req.session.returnTo = null;
+  req.session.csrf = crypto.randomBytes(18).toString('hex');
+  req.session.user = { username: user.username, name: user.name, office: user.office, role: user.role, mustChange: user.mustChange };
+  if (user.mustChange) return res.redirect('/account/password');
+  res.redirect(to && to.startsWith('/') && !to.startsWith('//') ? to : '/staff');
 });
-app.get('/auth/discord/callback', async (req, res) => {
-  try {
-    if (!req.query.code || req.query.state !== req.session.oauthState) throw new Error('The login could not be verified. Try again.');
-    req.session.oauthState = null;
-    const tok = await A.exchange(req.query.code);
-    const user = await A.resolveUser(tok.access_token);
-    req.session.user = user;
-    if (!A.isStaff(user)) return res.page({ title: 'Not admitted', body: V.message('These halls are for Ministry staff', `Welcome, ${V.esc(user.name)}. Your Discord account is not on the Ministry rolls. If you serve the Ministry, ask the Minister to admit you. You may still read the <a href="/notices">Notice Board</a>.`) }, 403);
-    const to = req.session.returnTo || '/staff'; req.session.returnTo = null;
-    res.redirect(to.startsWith('/') ? to : '/staff');
-  } catch (e) {
-    res.page({ title: 'Login failed', body: V.message('The Staff Entrance is barred', V.esc(e.message)) }, 400);
-  }
+app.get('/account/password', A.requireStaff, (req, res) => res.page({ title: 'Change password', body: V.passwordPage(req.session.csrf, req.session.user.mustChange) }));
+app.post('/account/password', A.requireStaff, checkCsrf, (req, res) => {
+  const u = req.session.user;
+  const cur = String(req.body.current || ''), next = String(req.body.password || ''), again = String(req.body.confirm || '');
+  const fail = msg => res.page({ title: 'Change password', body: V.passwordPage(req.session.csrf, u.mustChange, msg) }, 400);
+  if (!U.authenticate(u.username, cur)) return fail('Your current password is not correct.');
+  if (next !== again) return fail('The two new passwords do not match.');
+  if (next === cur) return fail('Choose a password different from the current one.');
+  try { U.update(u.username, { password: next, mustChange: false }); } catch (e) { return fail(e.message); }
+  req.session.user = { ...u, mustChange: false };
+  req.session.flash = { text: 'Your password is changed.' };
+  res.redirect('/staff');
 });
-if (C.DEV_LOGIN) {
-  app.get('/dev-login', (req, res) => {
-    req.session.user = { id: 'dev', name: req.query.role === 'admin' ? 'Nimmi Silver' : 'Clerk Aldric', role: req.query.role === 'admin' ? 'admin' : 'staff' };
-    res.redirect('/staff');
-  });
-}
 app.post('/logout', checkCsrf, (req, res) => { req.session = null; res.redirect('/'); });
 
 const staff = express.Router();
@@ -151,11 +159,11 @@ staff.post('/forms/:key', checkCsrf, async (req, res) => {
       const n = await G.nextNumber(f.num);
       const recordNo = `${f.num} ${roman(n)}`;
       const subject = fields[f.subject] || f.title;
-      const buffer = await build(f, { fields, recordNo, recordDate, filedBy: req.session.user.name, sigNames });
+      const buffer = await build(f, { fields, recordNo, recordDate, filedBy: req.session.user.name + (req.session.user.office ? ', ' + req.session.user.office : ''), sigNames });
       const doc = await G.uploadAsGoogleDoc(buffer, `${recordNo} — ${subject}`.slice(0, 180), C.FOLDERS[f.folder]);
       const summary = f.summary ? String(fields[f.summary] || '').slice(0, 4000) : '';
       const row = {
-        'Record No': recordNo, Class: f.num, Number: n, 'Date (4E)': recordDate, Subject: subject, 'Filed By': req.session.user.name,
+        'Record No': recordNo, Class: f.num, Number: n, 'Date (4E)': recordDate, Subject: subject, 'Filed By': req.session.user.name + (req.session.user.office ? ', ' + req.session.user.office : ''),
         Folder: C.FOLDER_NAMES[f.folder], Document: doc.webViewLink, Status: 'Open', Public: makePublic ? 'Yes' : 'No', Summary: summary,
         'Filed At (UTC)': new Date().toISOString(), Form: f.key
       };
@@ -211,8 +219,34 @@ app.use('/staff', staff);
 
 const admin = express.Router();
 admin.use(A.requireAdmin);
-admin.get('/', (req, res) => {
-  res.page({ title: 'Minister’s Study', active: 'admin', body: V.adminPage(G.status(), { configured: A.discordConfigured(), staff: C.STAFF_DISCORD_IDS.length, admins: C.ADMIN_DISCORD_IDS.length, guild: !!C.DISCORD_GUILD_ID }, req.session.csrf) });
+function study(req, res, status) {
+  res.page({ title: 'Minister\u2019s Study', active: 'admin', body: V.adminPage(G.status(), U.list(), req.session.csrf, req.session.user, res.locals.issued) }, status);
+}
+admin.get('/', (req, res) => study(req, res));
+admin.post('/officers', checkCsrf, (req, res) => {
+  const pw = U.tempPassword();
+  try {
+    U.create({ username: req.body.username, name: req.body.name, office: req.body.office, role: req.body.role, password: pw });
+    res.locals.issued = { username: String(req.body.username).trim().toLowerCase(), name: req.body.name, password: pw, fresh: true };
+    study(req, res);
+  } catch (e) { res.page({ title: 'Minister\u2019s Study', active: 'admin', flash: { err: true, text: e.message }, body: V.adminPage(G.status(), U.list(), req.session.csrf, req.session.user) }, 400); }
+});
+admin.post('/officers/:username/:action', checkCsrf, (req, res) => {
+  const who = req.params.username, act = req.params.action;
+  try {
+    if (act === 'reset') {
+      const pw = U.tempPassword();
+      const u = U.update(who, { password: pw, mustChange: true });
+      res.locals.issued = { username: u.username, name: u.name, password: pw };
+      return study(req, res);
+    }
+    if (act === 'suspend') { if (who === req.session.user.username) throw new Error('You cannot suspend your own account.'); U.update(who, { active: false }); req.session.flash = { text: 'Suspended ' + who + '.' }; }
+    else if (act === 'restore') { U.update(who, { active: true }); req.session.flash = { text: 'Restored ' + who + '.' }; }
+    else if (act === 'role') { if (who === req.session.user.username && req.body.role !== 'admin') throw new Error('You cannot remove your own Minister rank.'); U.update(who, { role: req.body.role }); req.session.flash = { text: 'Rank updated for ' + who + '.' }; }
+    else if (act === 'edit') { U.update(who, { name: req.body.name, office: req.body.office }); req.session.flash = { text: 'Updated ' + who + '.' }; }
+    else if (act === 'remove') { if (who === req.session.user.username) throw new Error('You cannot strike your own name from the rolls.'); U.remove(who); req.session.flash = { text: 'Removed ' + who + ' from the rolls.' }; }
+  } catch (e) { req.session.flash = { err: true, text: e.message }; }
+  res.redirect('/admin');
 });
 admin.get('/google/connect', (req, res) => {
   if (!G.configured()) return res.redirect('/admin');
@@ -247,4 +281,5 @@ app.use((err, req, res, next) => {
   res.page({ title: 'Error', body: V.message('Something went amiss', 'The clerks could not complete that request. Try again shortly.') }, 500);
 });
 
+U.bootstrap();
 app.listen(C.PORT, () => console.log(`Ministry portal listening on ${C.PORT}`));
