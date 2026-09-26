@@ -82,6 +82,18 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.page({ title: 'Petition status', active: 'petition', body: V.petitionStatus(q, result) });
   }));
 
+  app.get('/records', wrap(async (req, res) => {
+    const q = String(req.query.q || '').trim().slice(0, 80);
+    const rows = await publicRows();
+    let results;
+    if (q) {
+      if (!A.rateLimit('reclookup|' + req.ip, 40, 10 * 60 * 1000)) return res.say('Too many searches', 'Wait a little and search again.', 429);
+      const needle = q.toLowerCase();
+      results = rows === null ? null : rows.filter(r => r.Public === 'Yes' && [r['Record No'], r.Subject, r.Summary, r.Hold, r.Class].some(v => String(v || '').toLowerCase().includes(needle))).slice(0, 40);
+    }
+    res.page({ title: 'Record Lookup', active: 'records', body: V.recordLookup(q, results) });
+  }));
+
   app.get('/directory', (req, res) => {
     res.page({ title: 'Directory', active: 'directory', body: V.directory(Ranks.all(), U.list()) });
   });
@@ -94,7 +106,11 @@ module.exports = (app, { checkCsrf, wrap }) => {
       const dt = x => x ? formatDate(x.day, x.month, x.year) : '';
       return { no: r['Record No'], holder: f.holder || r.Subject, press: f['press-or-trading-name'], kind: f.kind, standing: f.standing, hold: r.Hold || f['residence-hold'], issued: dt(d['date-issued']) || r['Date (4E)'], expires: dt(d.expires) };
     }).filter(l => !['Suspended', 'Revoked', 'Lapsed'].includes(l.standing));
-    res.page({ title: 'Register of Licenses', active: 'licenses', body: V.licenses(list, rows === null ? 'The Register is being prepared.' : '') });
+    const heraldry = (rows || []).filter(r => r.Form === 'heraldry' && !['Awaiting Seal', 'Returned'].includes(r.Status)).map(r => {
+      const f = (Records.meta(r).input || {}).f || {};
+      return { no: r['Record No'], name: f.name || r.Subject, claim: f.claim, hold: f['home-province-hold'], ledger: f['imperial-ledger-entry'], recommendation: f.recommendation, date: r['Date (4E)'] };
+    }).filter(h => h.recommendation === 'Forward for Recognition');
+    res.page({ title: 'Register of Licenses', active: 'licenses', body: V.licenses(list, rows === null ? 'The Register is being prepared.' : '', heraldry) });
   }));
 
   app.get('/laws', wrap(async (req, res) => {

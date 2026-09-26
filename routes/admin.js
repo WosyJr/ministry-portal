@@ -7,6 +7,8 @@ const G = require('../lib/google');
 const Ranks = require('../lib/ranks');
 const Settings = require('../lib/settings');
 const Activity = require('../lib/activity');
+const Forms = require('../lib/forms');
+const C = require('../lib/config');
 
 const arr = v => (Array.isArray(v) ? v : v ? [v] : []);
 const clean = (s, max) => String(s ?? '').replace(/\r/g, '').trim().slice(0, max);
@@ -132,6 +134,61 @@ module.exports = (app, { checkCsrf, wrap }) => {
     Activity.log(req.user, 'changed the Ledger of Laws');
     req.session.flash = { text: 'The Ledger of Laws is updated.' };
     res.redirect('/admin/settings');
+  });
+
+  function parseSections(b) {
+    const sections = [];
+    for (let i = 0; i < 5; i++) {
+      const h = clean(b[`sh${i}`], 100);
+      if (!h) continue;
+      if (b[`skind${i}`] === 'paragraph') {
+        sections.push({ h, kind: 'paragraph', lines: Math.max(1, Math.min(10, parseInt(b[`slines${i}`], 10) || 4)) });
+        continue;
+      }
+      const fields = [];
+      for (let j = 0; j < 6; j++) {
+        const label = clean(b[`f${i}_${j}_label`], 100);
+        if (!label) continue;
+        const type = ['text', 'date', 'options'].includes(b[`f${i}_${j}_type`]) ? b[`f${i}_${j}_type`] : 'text';
+        fields.push({ label, type, options: type === 'options' ? clean(b[`f${i}_${j}_options`], 300) : '', required: b[`f${i}_${j}_required`] === '1' });
+      }
+      if (fields.length) sections.push({ h, kind: 'fields', fields });
+    }
+    return sections;
+  }
+  function formsPage(req, res, status, editing) {
+    res.page({ title: 'Writ Templates', active: 'admin', body: AV.formsPage(Forms.listCustom(), C.FOLDER_NAMES, Forms.DEPTS, req.session.csrf, req.user, editing) }, status);
+  }
+  r.get('/forms', minister, (req, res) => formsPage(req, res));
+  r.get('/forms/:id/edit', minister, (req, res) => {
+    const entry = Forms.listCustom().find(x => x.id === req.params.id);
+    if (!entry) { req.session.flash = { err: true, text: 'No such writ template.' }; return res.redirect('/admin/forms'); }
+    formsPage(req, res, 200, entry);
+  });
+  r.post('/forms', minister, checkCsrf, (req, res) => {
+    const b = req.body;
+    try {
+      const spec = {
+        id: clean(b.id, 40) || undefined, title: clean(b.title, 140), subtitle: clean(b.subtitle, 200), tag: clean(b.tag, 80),
+        num: clean(b.num, 40), folder: b.folder, preamble: clean(b.preamble, 1200), authority: clean(b.authority, 400), limitation: clean(b.limitation, 400),
+        depts: arr(b.depts), publicCapable: b.publicCapable === '1',
+        sig: String(b.sig || '').split(/\n|,/).map(s => s.trim()).slice(0, 4),
+        sections: parseSections(b)
+      };
+      const entry = Forms.saveCustom(spec);
+      Activity.log(req.user, spec.id ? 'amended a writ template' : 'created a writ template', '', entry.title);
+      req.session.flash = { text: 'The writ template is saved. Officers of the offices you ticked may now file it.' };
+      res.redirect('/admin/forms');
+    } catch (e) { req.session.flash = { err: true, text: e.message }; formsPage(req, res, 400, { ...req.body, sections: parseSections(req.body) }); }
+  });
+  r.post('/forms/:id/delete', minister, checkCsrf, (req, res) => {
+    try {
+      const entry = Forms.listCustom().find(x => x.id === req.params.id);
+      Forms.removeCustom(req.params.id);
+      Activity.log(req.user, 'removed a writ template', '', entry ? entry.title : '');
+      req.session.flash = { text: 'The writ template is removed. Records already filed under it may still be read and amended.' };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/admin/forms');
   });
 
   r.get('/google/connect', minister, (req, res) => {

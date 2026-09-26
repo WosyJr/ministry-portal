@@ -10,11 +10,11 @@ const G = require('./lib/google');
 const S = require('./lib/store');
 const Records = require('./lib/records');
 const Settings = require('./lib/settings');
+const Notify = require('./lib/notify');
 
 const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
-app.use(express.urlencoded({ extended: true, limit: '3mb', parameterLimit: 5000 }));
 app.use(cookieSession({ name: 'ministry', keys: [C.SESSION_SECRET], maxAge: 1000 * 60 * 60 * 24 * 14, sameSite: 'lax', secure: C.PRODUCTION, httpOnly: true }));
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 const VENDOR = { 'pdf.min.js': 'pdfjs-dist/build/pdf.min.js', 'pdf.worker.min.js': 'pdfjs-dist/build/pdf.worker.min.js', 'html2canvas.min.js': 'html2canvas/dist/html2canvas.min.js' };
@@ -32,6 +32,7 @@ async function badges(u) {
     }
   } catch (_) {}
   if (A.can(u, 'handover')) b.handover = S.read('handover.json', []).filter(n => (n.to === 'user:' + u.username || n.to === 'rank:' + u.rank) && !(n.readBy || []).includes(u.username)).length || '';
+  b.notify = Notify.unreadCount(u) || '';
   return b;
 }
 
@@ -49,6 +50,7 @@ app.use((req, res, next) => {
   res.say = (title, text, status) => res.page({ title, body: V.message(title, text) }, status);
   next();
 });
+app.use(express.urlencoded({ extended: true, limit: '8mb', parameterLimit: 5000 }));
 
 function checkCsrf(req, res, next) {
   if (req.body && req.body._csrf && req.body._csrf === req.session.csrf) return next();
@@ -66,7 +68,13 @@ app.get('/healthz', (req, res) => res.json({ ok: true }));
 
 app.use((req, res) => res.say('No such hall', 'Nothing in the Ministry answers to that path.', 404));
 app.use((err, req, res, next) => {
+  if (typeof res.say !== 'function') {
+    console.error(err);
+    const status = (err && err.status) || (err && err.type === 'entity.too.large' ? 413 : 500);
+    return res.status(status).type('html').send('<!doctype html><title>Something went amiss</title><body style="font-family:Georgia,serif;max-width:640px;margin:60px auto;padding:0 20px"><h1>Something went amiss</h1><p>The clerks could not complete that request. Try again shortly.</p></body>');
+  }
   if (err === 'forbidden') return res.say('These halls are closed to you', 'Your rank does not open this part of the Ministry. If you need it, ask the Minister.', 403);
+  if (err && (err.type === 'entity.too.large' || err.status === 413)) return res.say('That picture is too large', 'Seal and signet pictures must be under a few megabytes. Choose a smaller picture, or crop and re-save it, then try again.', 413);
   console.error(err);
   res.say('Something went amiss', 'The clerks could not complete that request. ' + V.esc(err && err.message ? err.message : '') + ' Try again shortly.', 500);
 });

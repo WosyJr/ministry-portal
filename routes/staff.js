@@ -10,6 +10,7 @@ const Ranks = require('../lib/ranks');
 const Records = require('../lib/records');
 const Settings = require('../lib/settings');
 const Activity = require('../lib/activity');
+const Notify = require('../lib/notify');
 const DocView = require('../lib/docview');
 const { BY_KEY } = require('../lib/forms');
 const { DEPTS, QUIZ } = require('../lib/content');
@@ -158,13 +159,34 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     }
     res.page({ title: 'Docket', active: 'docket', body: SV.docketPage(rows, u, req.query.q, f, classes, U.list()) });
   }));
-  r.get('/search', (req, res) => res.redirect('/staff/archives' + (req.query.q ? '?q=' + encodeURIComponent(String(req.query.q)) : '')));
+  r.get('/search', wrap(async (req, res) => {
+    const q = String(req.query.q || '').trim().slice(0, 80);
+    let results = null;
+    if (q) {
+      const needle = q.toLowerCase();
+      const has = (...vals) => vals.some(v => String(v || '').toLowerCase().includes(needle));
+      const rows = (await Records.visible(req.user)) || [];
+      const records = rows.filter(r => has(r['Record No'], r.Subject, r.Folder, r.Hold, r['Filed By'])).sort((a, b) => b['Record No'].localeCompare(a['Record No'])).slice(0, 40);
+      const officers = U.list().filter(o => o.active && has(o.name, o.office, o.rankName, V.holdNames(o.holds))).slice(0, 25);
+      const holds = Ranks.HOLDS.filter(h => has(h.name, h.seat));
+      const bulletin = A.can(req.user, 'bulletin') ? S.read('bulletin.json', []).filter(p => has(p.title, p.body)).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 15) : [];
+      results = { q, records, officers, holds, bulletin };
+    }
+    res.page({ title: 'Search', body: SV.search(results, req.user) });
+  }));
+
+  r.get('/notifications', (req, res) => {
+    const list = Notify.forUser(req.user).map(n => ({ ...n, read: (n.readBy || []).includes(req.user.username) }));
+    Notify.markAllRead(req.user);
+    res.page({ title: 'Notifications', body: SV.notifications(list) });
+  });
 
   r.get('/records/:no', wrap(async (req, res) => {
     const rec = await findRecord(req, res); if (!rec) return;
     const rows = await Records.all();
     const linked = Records.links(rec).map(no => ({ no, row: rows.find(x => x['Record No'] === no && Records.canSee(req.user, x)) }));
     const id = Records.docId(rec);
+    if (!Activity.loggedRecently(req.user.username, 'viewed', rec['Record No'], 10 * 60 * 1000)) Activity.log(req.user, 'viewed', rec['Record No']);
     res.page({ title: rec['Record No'], active: 'docket', body: SV.recordPage(rec, { u: req.user, csrf: req.session.csrf, officers: U.list(), linked, history: Activity.recent({ target: rec['Record No'], limit: 40 }), docSrc: id ? `/staff/files/${encodeURIComponent(id)}/content` : '', m: Records.meta(rec) }) });
   }));
 
@@ -192,6 +214,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     if (un && (!o || !o.active)) throw new Error('No such officer.');
     await Records.assign(rec['Record No'], un);
     Activity.log(req.user, un ? 'assigned it to ' + o.name : 'cleared the assignment', rec['Record No']);
+    if (un && un !== req.user.username) Notify.notifyUser(un, `${req.user.name} laid ${rec['Record No']} — ${rec.Subject} on your desk.`, V.recUrl(rec['Record No']));
     return un ? `${rec['Record No']} is laid on ${o.name}’s desk.` : 'Assignment cleared.';
   }));
   r.post('/records/:no/hold', ...recPost('status', async (req, rec) => {
@@ -219,13 +242,17 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     return yes ? 'Posted for the public.' : 'Withdrawn from public view.';
   }));
   r.post('/records/:no/approve', ...recPost('approve', async (req, rec) => {
+    const filer = Records.meta(rec).filer;
     await Records.approve(rec['Record No'], req.user);
     Activity.log(req.user, 'approved and sealed', rec['Record No']);
+    if (filer && filer !== req.user.username) Notify.notifyUser(filer, `${rec['Record No']} — ${rec.Subject} was sealed by ${req.user.name}.`, V.recUrl(rec['Record No']));
     return `${rec['Record No']} is sealed.`;
   }));
   r.post('/records/:no/return', ...recPost('approve', async (req, rec) => {
+    const filer = Records.meta(rec).filer;
     await Records.sendBack(rec['Record No'], req.user, req.body.note);
     Activity.log(req.user, 'returned for correction', rec['Record No'], clean(req.body.note, 200));
+    if (filer && filer !== req.user.username) Notify.notifyUser(filer, `${rec['Record No']} — ${rec.Subject} was returned to you for correction by ${req.user.name}.`, V.recUrl(rec['Record No']));
     return `${rec['Record No']} is returned to its filer.`;
   }));
   r.post('/records/:no/resubmit', ...recPost(null, async (req, rec) => {
@@ -531,6 +558,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   }));
 
   r.get('/profile', (req, res) => res.page({ title: 'Profile', body: SV.profile(req.user, U.view(req.user.username), req.session.csrf) }));
+  r.get('/id-card', (req, res) => res.send(V.idCardPrint(U.view(req.user.username), '/seal/minister', res.locals.today)));
   r.post('/profile', checkCsrf, (req, res) => {
     const u = req.user;
     try {

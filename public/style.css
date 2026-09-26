@@ -26,10 +26,13 @@ header.mast{padding-block:26px 0;text-align:center}
 .minister b{color:var(--ink);font-weight:600}
 .rule{height:7px;margin:18px 0 0;border-top:2px solid var(--gold);border-bottom:1px solid var(--gold)}
 nav.tabs{position:sticky;top:0;z-index:5;background:var(--parch);border-bottom:1px solid var(--line);margin-inline:-16px;padding-inline:16px}
-.tabs-inner{max-width:1080px;margin:0 auto;display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin}
+.tabs-inner{max-width:1080px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;row-gap:2px;gap:2px}
 .tabs a{flex:none;text-decoration:none;color:var(--sepia);font-family:var(--display);font-size:16px;padding:10px 12px 9px;border-bottom:3px solid transparent;white-space:nowrap}
 .tabs a:hover{color:var(--blood)}
 .tabs a.on{color:var(--blood);border-bottom-color:var(--blood)}
+.tabsep{flex:none;width:1px;align-self:stretch;margin:8px 6px;background:var(--line)}
+.quicksearch{display:flex;gap:6px;align-items:center;margin-left:auto;padding:6px 0}
+.quicksearch input{font-family:var(--body);font-size:14px;padding:6px 9px;border:1px solid var(--line);background:#FBF7EC;color:var(--ink);border-radius:2px;width:200px;max-width:40vw}
 main{padding-top:26px}
 h2{font-family:var(--display);font-weight:400;color:var(--blood);font-size:30px;margin:0 0 6px;text-wrap:balance}
 h3{font-family:var(--display);font-weight:400;color:var(--blood);font-size:21px;margin:0 0 8px}
@@ -142,6 +145,8 @@ a.plain:hover{color:var(--blood);text-decoration:underline}
 .topbar .hour{font-size:13px;font-style:italic}
 .topbar .topright{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .topbar .who{white-space:nowrap}
+.bell{position:relative;text-decoration:none;font-size:17px;line-height:1;padding:2px 2px 2px 0}
+.bell .badge{position:relative;top:-8px;left:-2px;padding:0 5px;min-width:16px;font-size:11px;line-height:16px}
 .tabs-inner.pub a{font-size:15px;padding:8px 11px 7px}
 .tabs-inner.staff{border-top:1px solid rgba(184,154,98,.55)}
 .tabs-inner.staff a{font-size:15.5px}
@@ -158,6 +163,7 @@ a.tal:hover{border-color:var(--blood)}
 .tal .tl{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--sepia)}
 .plainlist{list-style:none;margin:0;padding:0}
 .plainlist li{padding:7px 0;border-bottom:1px solid rgba(184,154,98,.45);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.notif-list li.unread{background:rgba(107,20,20,.06);border-left:3px solid var(--blood);padding-left:8px;font-weight:600}
 .history li{display:block}
 .post,.reqcard{border:1px solid var(--line);background:rgba(246,237,214,.8);padding:14px 18px}
 .post.pinned{border:3px double var(--blood)}
@@ -289,7 +295,28 @@ code.pw{font-size:18px;background:#FBF5E6;padding:2px 8px;border:1px solid var(-
 .s-sig{font-family:var(--display);font-style:italic;font-size:28px;color:var(--quill);border-bottom:1px solid var(--ink);padding-right:30px}
 .s-role{font-size:14px;color:var(--sepia);margin-top:4px}
 .s-wax{width:140px;height:140px;object-fit:contain}
+.idcwrap{display:flex;justify-content:center;padding:20px 0}
+.idcard{width:440px;max-width:100%;background:#F3E9D2;border:5px double var(--gold);padding:0;color:var(--ink);background-image:radial-gradient(ellipse at 50% 0,rgba(255,250,235,.7),transparent 70%),radial-gradient(ellipse at 50% 100%,rgba(140,106,47,.18),transparent 60%);overflow:hidden}
+.idc-band{background:var(--blood);color:var(--parch);text-align:center;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:5px 8px}
+.idc-head{display:flex;align-items:center;gap:12px;padding:14px 18px 8px}
+.idc-head .seal{width:52px;height:52px;flex:none}
+.idc-ministry{font-family:var(--display);color:var(--blood);font-size:19px;line-height:1.15}
+.idc-sub{font-style:italic;color:var(--sepia);font-size:13px;margin-top:2px}
+.idc-body{display:flex;gap:16px;align-items:flex-start;padding:6px 18px 14px;border-top:1px solid var(--gold-soft);border-bottom:1px solid var(--gold-soft)}
+.idc-sigilbox{flex:none;width:76px;height:76px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;margin-top:4px}
+.idc-sigil-img{width:100%;height:100%;object-fit:contain}
+.idc-sigil-text{font-family:var(--display);color:var(--blood);font-size:26px}
+.idc-name{font-family:var(--display);color:var(--ink);font-size:23px;line-height:1.15}
+.idc-rank{color:var(--blood);font-weight:600;font-size:15px}
+.idc-office{font-style:italic;color:var(--sepia);font-size:14px}
+.idc-meta{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;margin:8px 0 0;font-size:13px}
+.idc-meta dt{color:var(--sepia);text-transform:uppercase;letter-spacing:.06em;font-size:11px}
+.idc-meta dd{margin:0 0 2px;color:var(--ink)}
+.idc-foot{display:flex;align-items:center;gap:12px;padding:10px 18px 16px}
+.idc-wax{width:50px;height:50px;object-fit:contain;flex:none}
+.idc-foot-text{margin:0;font-size:11px;line-height:1.4;color:var(--sepia);font-style:italic}
 @media print{
+  .idcwrap{padding:0}
   .printbar,.topbar,nav.tabs,.foot,.noprint,.linkrow.noprint{display:none!important}
   .printbody{background:none;padding:0}
   .scroll{border-width:6px;box-shadow:none}
