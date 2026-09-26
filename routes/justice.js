@@ -44,7 +44,9 @@ module.exports = (app, { checkCsrf, wrap }) => {
   }));
 
   app.get('/justice/judgments', wrap(async (req, res) => {
-    page(res, req, 'Register of Judgments', JV.judgmentsPage(req.user, J.judged().filter(c => c.published)));
+    const shown = J.judged().filter(c => c.published && !c.sealed);
+    const withheld = J.judged().filter(c => c.published && c.sealed).length;
+    page(res, req, 'Register of Judgments', JV.judgmentsPage(req.user, shown, withheld));
   }));
 
   app.get('/justice/entrance', wrap(async (req, res) => {
@@ -132,8 +134,9 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/justice/warrants');
   }));
 
-  app.get('/justice/calendar', seeCases, wrap(async (req, res) => {
-    page(res, req, 'Calendar of Sittings', JV.calendarPage(req.user, J.calendar()));
+  app.get('/justice/calendar', wrap(async (req, res) => {
+    const inside = !!(req.user && (req.user.all || Ranks.can(req.user, 'juscases') || Ranks.can(req.user, 'jusdesk')));
+    page(res, req, 'Calendar of Sittings', JV.calendarPage(req.user, J.calendar(), inside));
   }));
 
   app.get('/justice/cases', seeCases, wrap(async (req, res) => {
@@ -155,7 +158,13 @@ module.exports = (app, { checkCsrf, wrap }) => {
   app.get('/justice/cases/:id', seeCases, wrap(async (req, res) => {
     const c = J.caseGet(String(req.params.id));
     if (!c) return res.say('No such matter', 'No matter upon the bench answers to that.', 404);
-    page(res, req, c.no, JV.casePage(req.user, c, req.session.csrf, { file: mayFile(req.user), judge: mayJudge(req.user) }, benchOfficers(), { offences: J.offences(), appealedIn: J.appealedIn(c.no) }));
+    const byNo = {};
+    J.cases().forEach(x => { byNo[x.no.toLowerCase()] = { id: x.id, no: x.no }; });
+    page(res, req, c.no, JV.casePage(req.user, c, req.session.csrf, { file: mayFile(req.user), judge: mayJudge(req.user) }, benchOfficers(), {
+      offences: J.offences(), appealedIn: J.appealedIn(c.no),
+      courts: J.holdCourts(), citable: J.citable(c.id), citedBy: J.citedBy(c.no), byNo,
+      exhibits: J.exhibitsFor(c.no), dues: J.duesFor(c.no), sentences: J.sentencesFor(c.no)
+    }));
   }));
 
   const back = (req, res, id, msg, err) => {
@@ -196,7 +205,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   app.post('/justice/cases/:id/judgment', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
     const id = String(req.params.id);
     try {
-      const c = J.judgmentGive(id, { ...(req.body || {}), published: !!(req.body || {}).published }, req.user);
+      const c = J.judgmentGive(id, { ...(req.body || {}), cites: [].concat((req.body || {}).cites || []), published: !!(req.body || {}).published }, req.user);
       Activity.log(req.user, 'gave judgment', c.no, c.judgment.finding);
       back(req, res, id, `Judgment given upon ${c.no}.`);
     } catch (e) { back(req, res, id, '', e.message); }
@@ -312,6 +321,47 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/justice/matters');
   }));
 
+
+  app.post('/justice/cases/:id/plea', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try { J.pleaEnter(id, req.body || {}, req.user); back(req, res, id, 'The plea is set down.'); }
+    catch (e) { back(req, res, id, '', e.message); }
+  }));
+
+  app.post('/justice/cases/:id/seal', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const c = J.sealSet(id, { sealed: !!(req.body || {}).sealed, sealReason: (req.body || {}).sealReason }, req.user);
+      Activity.log(req.user, c.sealed ? 'sealed a matter' : 'lifted the seal on a matter', c.no);
+      back(req, res, id, c.sealed ? 'The matter is sealed.' : 'The seal is lifted.');
+    } catch (e) { back(req, res, id, '', e.message); }
+  }));
+
+  app.post('/justice/cases/:id/witness', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try { J.witnessAdd(id, req.body || {}, req.user); back(req, res, id, 'The witness is called.'); }
+    catch (e) { back(req, res, id, '', e.message); }
+  }));
+
+  app.post('/justice/cases/:id/witness/:wid', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try { J.witnessUpdate(id, String(req.params.wid), { ...(req.body || {}), sworn: !!(req.body || {}).sworn }, req.user); back(req, res, id, 'Set down.'); }
+    catch (e) { back(req, res, id, '', e.message); }
+  }));
+
+  app.post('/justice/cases/:id/witness/:wid/remove', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    J.witnessRemove(id, String(req.params.wid));
+    back(req, res, id, 'The witness is struck.');
+  }));
+
+  app.get('/justice/cases/:id/witness/:wid/summons', seeCases, wrap(async (req, res) => {
+    const c = J.caseGet(String(req.params.id));
+    const w = c && (c.witnesses || []).find(x => x.id === String(req.params.wid));
+    if (!w) return res.status(404).send('No such witness.');
+    sendDoc(res, JV.witnessSummonsDoc(c, w));
+  }));
+
   // ---- Documents that may be given out ----
 
   const sendDoc = (res, html) => { res.set('Content-Type', 'text/html; charset=utf-8'); res.send(html); };
@@ -341,10 +391,168 @@ module.exports = (app, { checkCsrf, wrap }) => {
     sendDoc(res, JV.custodyDoc(x));
   }));
 
+
+  app.get('/justice/exhibits/:id/doc', seeCases, wrap(async (req, res) => {
+    const e = J.exhibitGet(String(req.params.id));
+    if (!e) return res.status(404).send('No such exhibit.');
+    sendDoc(res, JV.exhibitDoc(e));
+  }));
+
+  app.get('/justice/dues/:id/doc', seeCases, wrap(async (req, res) => {
+    const d = J.dueGet(String(req.params.id));
+    if (!d) return res.status(404).send('No such sum.');
+    sendDoc(res, JV.dueDoc(d, J.owingOf(d), J.paidOf(d)));
+  }));
+
+  app.get('/justice/sentences/:id/doc', seeCases, wrap(async (req, res) => {
+    const x = J.sentenceGet(String(req.params.id));
+    if (!x) return res.status(404).send('No such sentence.');
+    sendDoc(res, JV.sentenceDoc(x));
+  }));
+
+  app.get('/justice/custody/:id/bail', seeCases, wrap(async (req, res) => {
+    const x = J.custodyGet(String(req.params.id));
+    if (!x) return res.status(404).send('No such entry upon the register.');
+    sendDoc(res, JV.bailDoc(x));
+  }));
+
   app.get('/justice/lay/doc', wrap(async (req, res) => {
     const m = J.matterByNo(String(req.query.no || ''));
     if (!m) return res.status(404).send('No matter stands under that number.');
     sendDoc(res, JV.matterDoc(m));
+  }));
+
+
+  // ---- Public: verify a paper, persons sought, the calendar ----
+
+  app.get('/justice/verify', wrap(async (req, res) => {
+    const code = String(req.query.code || '').slice(0, 12);
+    const result = code ? J.verify(code) : null;
+    page(res, req, 'Verify a Paper', JV.verifyPage(req.user, code, result));
+  }));
+
+  app.get('/justice/wanted', wrap(async (req, res) => {
+    page(res, req, 'Persons Sought', JV.wantedPage(req.user, J.wanted()));
+  }));
+
+  app.get('/justice/courts', wrap(async (req, res) => {
+    const counts = {};
+    J.holdCourts().forEach(c => { counts[c.court] = J.appealsFrom(c.court).filter(x => !x.sealed).map(x => ({ id: x.id, no: x.no })); });
+    page(res, req, 'Courts of the Holds', JV.courtsPage(req.user, J.holdCourts(), req.session.csrf, mayJudge(req.user), counts));
+  }));
+
+  app.post('/justice/courts', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    try { const c = J.holdCourtSave(null, req.body || {}); req.session.flash = { text: `${c.court} is entered.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/courts');
+  }));
+
+  app.post('/justice/courts/:id', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    try { const c = J.holdCourtSave(String(req.params.id), req.body || {}); req.session.flash = { text: `${c.court} is amended.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/courts');
+  }));
+
+  app.post('/justice/courts/:id/remove', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    J.holdCourtRemove(String(req.params.id));
+    req.session.flash = { text: 'The court is struck from the register.' };
+    res.redirect('/justice/courts');
+  }));
+
+  // ---- Evidence and exhibits ----
+
+  app.get('/justice/exhibits', seeCases, wrap(async (req, res) => {
+    page(res, req, 'Evidence and Exhibits', JV.exhibitsPage(req.user, J.exhibits().slice().reverse(), req.session.csrf, mayFile(req.user), J.cases(), J.warrants()));
+  }));
+
+  app.post('/justice/exhibits', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
+    try { const e = J.exhibitTake(req.body || {}, req.user); Activity.log(req.user, 'took a thing into the keeping of Justice', e.no, e.what); req.session.flash = { text: `${e.no} is taken into keeping.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/exhibits');
+  }));
+
+  app.post('/justice/exhibits/:id', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
+    try { const e = J.exhibitUpdate(String(req.params.id), req.body || {}, req.user); req.session.flash = { text: `${e.no} is set down as ${e.status}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/exhibits');
+  }));
+
+  app.post('/justice/exhibits/:id/remove', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
+    J.exhibitRemove(String(req.params.id));
+    req.session.flash = { text: 'Struck from the register of exhibits.' };
+    res.redirect('/justice/exhibits');
+  }));
+
+  // ---- Fines and restitution ----
+
+  app.get('/justice/dues', seeCases, wrap(async (req, res) => {
+    page(res, req, 'Fines and Restitution', JV.duesPage(req.user, J.dues().slice().reverse(), req.session.csrf, mayFile(req.user), J.cases(), J.duesTotals()));
+  }));
+
+  app.post('/justice/dues', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    try { const d = J.dueOrder(req.body || {}, req.user); Activity.log(req.user, 'ordered a sum', d.no, `${d.who} — ${d.amount}`); req.session.flash = { text: `${d.no} is ordered against ${d.who}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/dues');
+  }));
+
+  app.post('/justice/dues/:id/payment', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
+    try { const d = J.dueRender(String(req.params.id), req.body || {}, req.user); req.session.flash = { text: `Entered. ${J.owingOf(d)} septims still owing upon ${d.no}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/dues');
+  }));
+
+  app.post('/justice/dues/:id/payment/:pid/remove', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
+    J.duePaymentRemove(String(req.params.id), String(req.params.pid));
+    req.session.flash = { text: 'The entry is struck.' };
+    res.redirect('/justice/dues');
+  }));
+
+  app.post('/justice/dues/:id', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    try { const d = J.dueUpdate(String(req.params.id), { ...(req.body || {}), remitted: !!(req.body || {}).remitted }, req.user); req.session.flash = { text: d.remitted ? `${d.no} is remitted.` : `${d.no} stands again.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/dues');
+  }));
+
+  app.post('/justice/dues/:id/remove', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    J.dueRemove(String(req.params.id));
+    req.session.flash = { text: 'Struck from the register.' };
+    res.redirect('/justice/dues');
+  }));
+
+  // ---- Sentences ----
+
+  app.get('/justice/sentences', seeCases, wrap(async (req, res) => {
+    page(res, req, 'Sentences of the Bench', JV.sentencesPage(req.user, J.sentences().slice().reverse(), req.session.csrf, mayJudge(req.user), J.cases()));
+  }));
+
+  app.post('/justice/sentences', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    try { const x = J.sentenceOrder(req.body || {}, req.user); Activity.log(req.user, 'ordered a sentence', x.no, `${x.kind} upon ${x.who}`); req.session.flash = { text: `${x.no} is ordered.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/sentences');
+  }));
+
+  app.post('/justice/sentences/:id', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    try { const x = J.sentenceUpdate(String(req.params.id), req.body || {}, req.user); req.session.flash = { text: `${x.no} is set down as ${x.status}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/sentences');
+  }));
+
+  app.post('/justice/sentences/:id/remove', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    J.sentenceRemove(String(req.params.id));
+    req.session.flash = { text: 'The sentence is struck.' };
+    res.redirect('/justice/sentences');
+  }));
+
+  // ---- The report ----
+
+  app.get('/justice/report', seeCases, wrap(async (req, res) => {
+    const from = String(req.query.from || ''), to = String(req.query.to || '');
+    page(res, req, 'The Report of the Ministry', JV.reportPage(req.user, J.report(from, to), from, to, req.user.name));
+  }));
+
+  app.get('/justice/report/doc', seeCases, wrap(async (req, res) => {
+    const from = String(req.query.from || ''), to = String(req.query.to || '');
+    sendDoc(res, JV.reportDoc(J.report(from, to), req.user.name));
   }));
 
   app.get('/justice/officers', needAdmin, wrap(async (req, res) => {

@@ -234,7 +234,17 @@ module.exports = (app, { checkCsrf, wrap }) => {
 
   app.get('/war-office/provost', seeRoster, wrap(async (req, res) => {
     const mine = J.warrants().filter(w => ['Arrest', 'Seizure', 'Summons'].includes(w.kind)).reverse();
-    page(res, req, 'Warrants from Justice', 'waroffice', WV.provostPage(req.user, mine, req.session.csrf, canManage(req.user)));
+    const sent = J.sentences().filter(x => x.status === 'Ordered' || x.status === 'With the Provost' || x.status === 'Carried out' || x.status === 'Could not be carried out').reverse().slice(0, 40);
+    page(res, req, 'Warrants from Justice', 'waroffice', WV.provostPage(req.user, mine, req.session.csrf, canManage(req.user), sent));
+  }));
+
+  app.post('/war-office/provost/sentence/:id', manageRoster, checkCsrf, wrap(async (req, res) => {
+    try {
+      const x = J.sentenceUpdate(String(req.params.id), req.body || {}, req.user);
+      Activity.log(req.user, 'made return upon a sentence of Justice', x.no, x.status);
+      req.session.flash = { text: `${x.no} is set down as ${x.status}.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/war-office/provost');
   }));
 
   app.post('/war-office/provost/:id', manageRoster, checkCsrf, wrap(async (req, res) => {
