@@ -31,9 +31,6 @@ nav.tabs{position:sticky;top:0;z-index:5;background:var(--parch);border-bottom:1
 .tabs a:hover{color:var(--blood)}
 .tabs a.on{color:var(--blood);border-bottom-color:var(--blood)}
 .tabsep{flex:none;width:1px;align-self:stretch;margin:8px 6px;background:var(--line)}
-.quicksearch{max-width:1080px;margin:0 auto;display:flex;gap:6px;align-items:center;justify-content:flex-end;padding:6px 0;border-top:1px solid rgba(184,154,98,.35)}
-.quicksearch input{flex:1 1 auto;font-family:var(--body);font-size:14px;padding:6px 9px;border:1px solid var(--line);background:#FBF7EC;color:var(--ink);border-radius:2px;min-width:0;max-width:320px}
-.quicksearch .btn{flex:none}
 main{padding-top:26px}
 h2{font-family:var(--display);font-weight:400;color:var(--blood);font-size:30px;margin:0 0 6px;text-wrap:balance}
 h3{font-family:var(--display);font-weight:400;color:var(--blood);font-size:21px;margin:0 0 8px}
@@ -333,7 +330,6 @@ code.pw{font-size:18px;background:#FBF5E6;padding:2px 8px;border:1px solid var(-
   .docview{padding:20px 16px}
   .scroll{padding:28px 18px}
   .s-foot{flex-direction:column}
-  .quicksearch input{max-width:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .printbar .btn.ghost{color:var(--parch);border-color:var(--gold-soft)}
