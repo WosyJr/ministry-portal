@@ -60,6 +60,62 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/war-office/roster?unit=' + unit);
   }));
 
+  app.get('/war-office/letters', wrap(async (req, res) => {
+    page(res, req, 'Send a Letter to the War Office', 'waroffice',
+      WV.letterBox(req.user, req.session.csrf, null, '', W.lettersWaiting().length));
+  }));
+
+  app.get('/war-office/letters/status', wrap(async (req, res) => {
+    const q = String(req.query.no || '').slice(0, 40);
+    let found = null, missing = false;
+    if (q) {
+      if (!A.rateLimit('warletter-look|' + req.ip, 40, 10 * 60 * 1000)) {
+        return res.say('Too many questions', 'Wait a little and ask again.', 429);
+      }
+      found = W.letterByNo(q);
+      missing = !found;
+    }
+    page(res, req, 'Ask after a Letter', 'waroffice', WV.letterStatus(req.user, q, found, missing));
+  }));
+
+  app.post('/war-office/letters', checkCsrf, wrap(async (req, res) => {
+    const b = req.body || {};
+    if (b.website) return res.redirect('/war-office/letters');
+    if (!A.rateLimit('warletter|' + req.ip, 4, 60 * 60 * 1000)) {
+      return page(res, req, 'Send a Letter', 'waroffice',
+        WV.letterBox(req.user, req.session.csrf, b, 'The War Office has had letters enough from your hand this hour. Return later.', W.lettersWaiting().length));
+    }
+    try {
+      const e = W.letterAdd(b);
+      Activity.log(null, 'sent a letter to the War Office', e.no, e.kind);
+      page(res, req, e.no, 'waroffice', WV.letterSent(req.user, e));
+    } catch (err) {
+      page(res, req, 'Send a Letter', 'waroffice',
+        WV.letterBox(req.user, req.session.csrf, b, err.message, W.lettersWaiting().length));
+    }
+  }));
+
+  app.get('/war-office/post', seeRoster, wrap(async (req, res) => {
+    const officers = W.all().filter(p => p.activity !== 'Vacant').sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    page(res, req, 'The Post of the War Office', 'waroffice',
+      WV.postPage(req.user, W.letters().slice().reverse(), req.session.csrf, canManage(req.user), officers));
+  }));
+
+  app.post('/war-office/post/:id', manageRoster, checkCsrf, wrap(async (req, res) => {
+    try {
+      const e = W.letterHandle(String(req.params.id), req.body || {}, req.user.name);
+      Activity.log(req.user, 'answered a letter of the War Office', e.no, e.status);
+      req.session.flash = { text: `${e.no} is set down as ${e.status}.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/war-office/post');
+  }));
+
+  app.post('/war-office/post/:id/remove', manageRoster, checkCsrf, wrap(async (req, res) => {
+    const e = W.letterGet(String(req.params.id));
+    if (e) { W.letterRemove(e.id); req.session.flash = { text: `${e.no} is struck from the post.` }; }
+    res.redirect('/war-office/post');
+  }));
+
   app.get('/war-office/properties', wrap(async (req, res) => {
     const editing = req.query.edit && canManage(req.user) ? W.propertyGet(String(req.query.edit)) : null;
     page(res, req, 'Holdings of the Legion', 'waroffice',

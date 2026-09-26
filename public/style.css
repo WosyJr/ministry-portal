@@ -366,7 +366,7 @@ code.pw{font-size:18px;background:#FBF5E6;padding:2px 8px;border:1px solid var(-
 .csgrid{display:grid;grid-template-columns:2fr 1fr;gap:12px 16px;align-items:end}
 .csf{display:flex;flex-direction:column;gap:5px;min-width:0}
 .csf>span{font-weight:600;color:var(--sepia);font-size:14px}
-.csf input[type=text],.csf select{font-family:var(--body);font-size:16px;padding:7px 10px;border:1px solid var(--line);background:#FBF7EC;color:var(--ink);border-radius:2px;width:100%}
+.csf input[type=text],.csf input[type=number],.csf input[type=search],.csf select,.csf textarea{font-family:var(--body);font-size:16px;padding:7px 10px;border:1px solid var(--line);background:#FBF7EC;color:var(--ink);border-radius:2px;width:100%}
 .csf-wide{grid-column:1/-1}
 @media(max-width:620px){.csgrid{grid-template-columns:1fr}}
 .csrow{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line);background:rgba(246,237,214,.6);margin-bottom:8px}
@@ -483,3 +483,7 @@ table.roster thead th{position:sticky;top:0;z-index:1}
 .holding-sub{font-style:italic;color:var(--sepia);font-size:13.5px;margin-top:2px}
 .holding-card .meta{margin-top:10px}
 .holding-notes{margin:10px 0 0;font-size:14px;color:var(--sepia)}
+.reqcard .csf{margin-bottom:8px}
+.reqcard .wargrid{margin-bottom:6px}
+.reqcard form.stack{align-items:stretch}
+.reqcard form.stack .csf,.reqcard form.stack .wargrid{width:100%}
