@@ -159,6 +159,25 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     }
     res.page({ title: 'Docket', active: 'docket', body: SV.docketPage(rows, u, req.query.q, f, classes, U.list()) });
   }));
+  r.get('/record-suggest', wrap(async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const q = String(req.query.q || '').trim().slice(0, 60);
+    if (q.length < 2) return res.json([]);
+    if (!A.rateLimit('recsug|' + req.user.username, 240, 60 * 1000)) return res.json([]);
+    const rows = await Records.visible(req.user);
+    if (!rows) return res.json([]);
+    const needle = q.toLowerCase();
+    const byNo = [], bySubject = [];
+    for (const r2 of rows) {
+      const no = String(r2['Record No'] || '');
+      const subject = String(r2.Subject || '');
+      if (no.toLowerCase().includes(needle)) byNo.push({ no, subject: subject.slice(0, 70), status: r2.Status || '' });
+      else if (subject.toLowerCase().includes(needle)) bySubject.push({ no, subject: subject.slice(0, 70), status: r2.Status || '' });
+      if (byNo.length >= 12) break;
+    }
+    res.json(byNo.concat(bySubject).slice(0, 12));
+  }));
+
   r.get('/search', wrap(async (req, res) => {
     const q = String(req.query.q || '').trim().slice(0, 80);
     let results = null;
