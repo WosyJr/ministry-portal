@@ -23,7 +23,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
 
   app.get('/', (req, res) => res.send(V.landingPage(res.locals.today)));
   app.get('/justice', (req, res) => res.send(V.ministryHolding('justice', res.locals.today)));
-  app.get('/war-office', (req, res) => res.send(V.ministryHolding('war', res.locals.today)));
 
   app.get('/hall', wrap(async (req, res) => {
     res.page({ title: 'The Hall', active: 'home', body: V.publicHome(notices(await publicRows()), res.locals.today) });

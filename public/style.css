@@ -380,3 +380,53 @@ code.pw{font-size:18px;background:#FBF5E6;padding:2px 8px;border:1px solid var(-
 .btn.ghost,.btn.ghost.small,.btn.ghost.big{color:var(--blood)}
 .btn[disabled],.btn.small[disabled],.btn.big[disabled]{color:#4A3A28}
 .btn.ghost[disabled],.btn.ghost.small[disabled]{color:var(--sepia)}
+.warnav{display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid var(--line);margin:0 0 20px}
+.warnav a{text-decoration:none;color:var(--sepia);font-family:var(--display);font-size:16px;padding:9px 13px 8px;border-bottom:3px solid transparent;white-space:nowrap}
+.warnav a:hover{color:var(--blood)}
+.warnav a.on{color:var(--blood);border-bottom-color:var(--blood)}
+.warnav.sub{border-bottom:0;margin:6px 0 14px}
+.warnav.sub a{font-size:15px;padding:5px 11px;border:1px solid var(--line);border-radius:2px;background:var(--paper)}
+.warnav.sub a.on{background:var(--blood);color:var(--parch);border-color:var(--blood)}
+.warroles{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px;margin-top:18px}
+.warrole{background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--gold-soft);padding:16px 18px}
+.warrole h3{font-family:var(--display);font-weight:400;color:var(--blood);margin:0;font-size:21px;line-height:1.15}
+.warrole-sub{font-style:italic;color:var(--sepia);font-size:14px;margin:2px 0 10px}
+.warrole ul{margin:0;padding-left:18px;font-size:15px;line-height:1.5}
+.warrole li{margin-bottom:3px}
+.warreq,.warnote{margin:10px 0 0;font-size:13.5px;color:var(--sepia);font-style:italic}
+.tone-dark{border-left-color:#2B1B0E}
+.tone-blood{border-left-color:var(--blood)}
+.tone-quill{border-left-color:var(--quill)}
+.tone-green{border-left-color:var(--ok)}
+.tone-gold{border-left-color:var(--gold)}
+.tone-violet{border-left-color:#5B3A7E}
+.qpath{margin-bottom:26px;border-left:4px solid var(--gold-soft);padding-left:16px}
+.qsteps{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
+.qstep{display:flex;gap:12px;background:var(--paper);border:1px solid var(--line);padding:14px 16px}
+.qkey{flex:none;font-family:var(--display);font-size:15px;color:var(--parch);background:var(--blood);padding:4px 9px;height:fit-content;border-radius:2px;white-space:nowrap}
+.qbody h4{margin:0 0 6px;font-family:var(--display);font-weight:400;font-size:17px;color:var(--ink)}
+.qbody ul{margin:0;padding-left:17px;font-size:14.5px;line-height:1.45}
+.qunlock{margin:8px 0 0;font-size:13.5px;font-style:italic;color:var(--gold)}
+.warladder{margin:10px 0 0;padding-left:20px;font-size:15.5px}
+.warladder>li{margin-bottom:10px}
+.warladder>li>ul{margin:4px 0 0;font-size:14.5px;color:var(--sepia)}
+.warstats{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0 20px}
+.warstat{flex:1 1 130px;border:1px solid var(--line);background:var(--paper);padding:12px 14px;text-align:center}
+.warstat .n{display:block;font-family:var(--display);font-size:26px;color:var(--blood);line-height:1.1}
+.warstat .t{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--sepia);margin-top:4px}
+.warstats.big .warstat .n{font-size:32px}
+.warstat.in .n{color:var(--ok)}
+.warstat.out .n{color:var(--blood-2)}
+table.roster{font-size:14px}
+table.roster td,table.roster th{padding:6px 8px;vertical-align:top}
+tr.dim{opacity:.62}
+.qchips{display:flex;flex-wrap:wrap;gap:3px}
+.qchip{font-size:10.5px;letter-spacing:.06em;background:var(--blood);color:var(--parch);padding:1px 5px;border-radius:2px;white-space:nowrap}
+.qpick{display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 0 14px}
+.qpickone{font-size:14px;color:var(--sepia);white-space:nowrap}
+.warform{max-width:100%}
+.wargrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 16px}
+.warcheck{font-size:14.5px;color:var(--sepia)}
+.linkrow.tight{margin-top:6px;gap:5px}
+@media(max-width:760px){.warroles,.qsteps{grid-template-columns:1fr}}
+.partynote{margin:0 0 12px;padding:8px 12px;border-left:3px solid var(--gold);background:rgba(184,154,98,.14);font-size:14.5px;color:var(--sepia);font-style:italic}
