@@ -262,21 +262,14 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     const form = BY_KEY[rec.Form];
     if (!form) throw new Error('This record was not filed through the hall and cannot be sent for a hand.');
     const sigIndex = Math.max(0, Math.min((form.sig || []).length - 1, parseInt(req.body.sigIndex, 10) || 0));
-    const toUser = clean(req.body.toUser, 40);
     const toName = clean(req.body.toName, 120);
-    if (!toUser && !toName) throw new Error('Name the person who must set their hand to it, or choose an officer.');
-    const target = toUser ? U.sessionUser(toUser) : null;
-    if (toUser && !target) throw new Error('No officer upon the rolls answers to that name.');
+    if (!toName) throw new Error('Name the person who must set their hand to it.');
     const cs = Counter.create({
       recordNo: rec['Record No'], formKey: rec.Form, by: req.user.username, byName: req.user.name,
-      toUser: target ? target.username : '', toName: target ? target.name : toName,
-      role: (form.sig || [])[sigIndex] || '', sigIndex, note: clean(req.body.note, 600)
+      toUser: '', toName, role: (form.sig || [])[sigIndex] || '', sigIndex, note: clean(req.body.note, 600)
     });
-    Activity.log(req.user, 'sent for a hand', rec['Record No'], cs.toName);
-    if (target) Notify.notifyUser(target.username, `${req.user.name} asks your hand upon ${rec['Record No']}`, '/sign/' + cs.token);
-    return target
-      ? `Laid before ${cs.toName}. It waits upon their desk.`
-      : `A private link is made for ${cs.toName}. Find it under “Awaiting a hand” on this record.`;
+    Activity.log(req.user, 'made a signing link', rec['Record No'], toName);
+    return `A signing link is made for ${toName}. Copy it below and send it to them.`;
   }));
   r.post('/countersign/:id/withdraw', checkCsrf, wrap(async (req, res) => {
     const cs = Counter.byId(req.params.id);
