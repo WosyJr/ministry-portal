@@ -1,4 +1,4 @@
-sconst express = require('express');
+const express = require('express');
 const C = require('../lib/config');
 const V = require('../lib/views');
 const SV = require('../lib/staffviews');
