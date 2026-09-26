@@ -200,7 +200,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     req.session.username = user.username;
     Activity.log(user, 'entered the hall');
     if (user.mustChange) return res.redirect('/account/password');
-    res.redirect(to && to.startsWith('/') && !to.startsWith('//') ? to : '/staff');
+    res.redirect(to && to.startsWith('/') && !to.startsWith('//') ? to : A.homeFor(U.sessionUser(user.username)));
   });
   app.get('/account/password', A.requireStaff, (req, res) => res.page({ title: 'Change password', body: V.passwordPage(req.session.csrf, req.user.mustChange) }));
   app.post('/account/password', A.requireStaff, checkCsrf, (req, res) => {
@@ -212,7 +212,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     if (next === cur) return fail('Choose a password different from the current one.');
     try { U.update(u.username, { password: next, mustChange: false }); } catch (e) { return fail(e.message); }
     req.session.flash = { text: 'Your password is changed.' };
-    res.redirect('/staff');
+    res.redirect(A.homeFor(U.sessionUser(u.username)));
   });
   app.post('/logout', checkCsrf, (req, res) => { req.session = null; res.redirect('/'); });
 };
