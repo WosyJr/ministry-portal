@@ -22,7 +22,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
   const notices = rows => (rows || []).filter(r => r.Public === 'Yes' && r.Form !== 'directive' && !['Awaiting Seal', 'Returned'].includes(r.Status)).reverse();
 
   app.get('/', (req, res) => res.send(V.landingPage(res.locals.today)));
-  app.get('/justice', (req, res) => res.send(V.ministryHolding('justice', res.locals.today)));
 
   app.get('/hall', wrap(async (req, res) => {
     res.page({ title: 'The Hall', active: 'home', body: V.publicHome(notices(await publicRows()), res.locals.today) });

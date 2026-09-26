@@ -487,3 +487,12 @@ table.roster thead th{position:sticky;top:0;z-index:1}
 .reqcard .wargrid{margin-bottom:6px}
 .reqcard form.stack{align-items:stretch}
 .reqcard form.stack .csf,.reqcard form.stack .wargrid{width:100%}
+.holders{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px;padding-top:9px;border-top:1px solid var(--gold-soft)}
+.judgment{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--blood);padding:15px 17px;margin-bottom:14px}
+.judgment h3{margin:2px 0 8px;font-family:var(--display);font-weight:400;font-size:20px;color:var(--blood)}
+.paper{background:rgba(246,237,214,.6);border:1px solid var(--line);padding:12px 15px;margin-bottom:10px}
+.paper h4{margin:3px 0 6px;font-family:var(--display);font-weight:400;font-size:17px;color:var(--ink)}
+.permgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:10px 0}
+.permset{border:1px solid var(--line);padding:10px 12px;margin:0;background:rgba(246,237,214,.5)}
+.permset legend{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);padding:0 6px}
+.checkline{display:block;font-size:14px;color:var(--sepia);margin-bottom:3px}

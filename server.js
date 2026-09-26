@@ -64,6 +64,7 @@ require('./routes/public')(app, ctx);
 require('./routes/staff')(app, ctx);
 require('./routes/admin')(app, ctx);
 require('./routes/war')(app, ctx);
+require('./routes/justice')(app, ctx);
 
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 
