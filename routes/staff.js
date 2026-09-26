@@ -466,8 +466,19 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   }));
 
   r.get('/correspondence', need('correspondence'), (req, res) => {
-    res.page({ title: 'Ministry Requests', active: 'correspondence', body: SV.correspondence(Records.requests().slice().reverse(), req.session.csrf, U.list()) });
+    res.page({ title: 'Ministry Requests', active: 'correspondence', body: SV.correspondence(Records.requests().slice().reverse(), req.session.csrf, U.list(), String(req.query.show || '')) });
   });
+  r.post('/correspondence/:id/archive', need('correspondence'), checkCsrf, wrap(async (req, res) => {
+    const put = req.body.act !== 'restore';
+    S.update('requests.json', [], l => {
+      const x = l.find(y => y.id === req.params.id);
+      if (x && x.status !== 'Pending') x.archived = put;
+      return l;
+    });
+    req.session.flash = { text: put ? 'Put away in the Register. It no longer waits upon this page.' : 'Brought back from the Register.' };
+    res.redirect('/staff/correspondence' + (put ? '' : '?show=archived'));
+  }));
+
   r.post('/correspondence/:id', need('correspondence'), checkCsrf, wrap(async (req, res) => {
     const act = req.body.act;
     const list = Records.requests();

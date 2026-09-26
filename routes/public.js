@@ -134,6 +134,10 @@ module.exports = (app, { checkCsrf, wrap }) => {
       return res.send(V.signDone({ title: 'Declined', text: 'Your answer is entered upon the Ministry’s record and the officer who asked has been told.', today: res.locals.today }));
     }
     if (!prev.signed.trim()) return again('Set down your name and office before you sign.');
+    const owed = blanks.filter(bl => bl.required && !(bl.type === 'date'
+      ? ((b.d || {})[bl.id] || {}).day
+      : String(((b.f || {})[bl.id]) || '').trim())).map(bl => bl.label);
+    if (owed.length) return again('Before you set your hand to it, answer: ' + owed.join(', ') + '.');
 
     const merged = {
       f: { ...(input.f || {}), ...(b.f || {}) },
