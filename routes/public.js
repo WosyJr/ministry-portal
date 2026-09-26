@@ -9,6 +9,9 @@ const Records = require('../lib/records');
 const Settings = require('../lib/settings');
 const Activity = require('../lib/activity');
 const { BY_KEY } = require('../lib/forms');
+const Counter = require('../lib/countersign');
+const Notify = require('../lib/notify');
+const Ranks2 = require('../lib/ranks');
 const { formatDate } = require('../lib/skyrim');
 
 module.exports = (app, { checkCsrf, wrap }) => {
@@ -18,7 +21,11 @@ module.exports = (app, { checkCsrf, wrap }) => {
   }
   const notices = rows => (rows || []).filter(r => r.Public === 'Yes' && r.Form !== 'directive' && !['Awaiting Seal', 'Returned'].includes(r.Status)).reverse();
 
-  app.get('/', wrap(async (req, res) => {
+  app.get('/', (req, res) => res.send(V.landingPage(res.locals.today)));
+  app.get('/justice', (req, res) => res.send(V.ministryHolding('justice', res.locals.today)));
+  app.get('/war-office', (req, res) => res.send(V.ministryHolding('war', res.locals.today)));
+
+  app.get('/hall', wrap(async (req, res) => {
     res.page({ title: 'The Hall', active: 'home', body: V.publicHome(notices(await publicRows()), res.locals.today) });
   }));
   app.get('/notices', wrap(async (req, res) => {
@@ -92,6 +99,60 @@ module.exports = (app, { checkCsrf, wrap }) => {
       results = rows === null ? null : rows.filter(r => r.Public === 'Yes' && [r['Record No'], r.Subject, r.Summary, r.Hold, r.Class].some(v => String(v || '').toLowerCase().includes(needle))).slice(0, 40);
     }
     res.page({ title: 'Record Lookup', active: 'records', body: V.recordLookup(q, results) });
+  }));
+
+  async function signCtx(req, res) {
+    const cs = Counter.byToken(String(req.params.token || ''));
+    if (!cs) { res.status(404).send(V.signDone({ title: 'No such request', text: 'That link answers to nothing. It may have been withdrawn, or already answered.', today: res.locals.today })); return null; }
+    if (cs.status !== 'Sent') { res.send(V.signDone({ title: 'Already answered', text: `This document was ${cs.status.toLowerCase()} on ${(cs.doneAt || '').slice(0, 10)}. Nothing further is asked of you.`, today: res.locals.today })); return null; }
+    const form = BY_KEY[cs.formKey];
+    const rows = await Records.allOrNull();
+    const rec = rows && rows.find(x => x['Record No'] === cs.recordNo);
+    if (!form || !rec) { res.status(404).send(V.signDone({ title: 'The record cannot be read', text: 'The Ministry cannot lay hands on that record just now. Tell the officer who sent you this link.', today: res.locals.today })); return null; }
+    return { cs, form, rec, input: (Records.meta(rec).input || { f: {}, d: {}, g: {}, sig: [] }) };
+  }
+
+  app.get('/sign/:token', wrap(async (req, res) => {
+    if (!A.rateLimit('sign|' + req.ip, 60, 10 * 60 * 1000)) return res.status(429).send(V.signDone({ title: 'Too many attempts', text: 'Wait a little and open the link again.', today: res.locals.today }));
+    const ctx = await signCtx(req, res); if (!ctx) return;
+    res.send(V.signPage({ ...ctx, blanks: V.blanksFor(ctx.form, ctx.input), csrf: req.session.csrf, today: res.locals.today }));
+  }));
+
+  app.post('/sign/:token', checkCsrf, wrap(async (req, res) => {
+    if (!A.rateLimit('signpost|' + req.ip, 30, 10 * 60 * 1000)) return res.status(429).send(V.signDone({ title: 'Too many attempts', text: 'Wait a little and try again.', today: res.locals.today }));
+    const ctx = await signCtx(req, res); if (!ctx) return;
+    const { cs, form, rec, input } = ctx;
+    const b = req.body || {};
+    const blanks = V.blanksFor(form, input);
+    const prev = { f: b.f || {}, d: b.d || {}, signed: String(b.signed || '').slice(0, 160), reply: String(b.reply || '').slice(0, 1200) };
+    const again = msg => res.status(400).send(V.signPage({ ...ctx, blanks, csrf: req.session.csrf, today: res.locals.today, prev, err: msg }));
+
+    if (b.act === 'decline') {
+      Counter.finish(cs.id, 'Declined', { reply: prev.reply });
+      Notify.notifyUser(cs.by, `${cs.toName || 'The other party'} declined to sign ${cs.recordNo}`, V.recUrl(cs.recordNo));
+      Activity.log(null, 'declined to sign', cs.recordNo, cs.toName);
+      return res.send(V.signDone({ title: 'Declined', text: 'Your answer is entered upon the Ministry’s record and the officer who asked has been told.', today: res.locals.today }));
+    }
+    if (!prev.signed.trim()) return again('Set down your name and office before you sign.');
+
+    const merged = {
+      f: { ...(input.f || {}), ...(b.f || {}) },
+      d: { ...(input.d || {}), ...(b.d || {}) },
+      g: input.g || {},
+      sig: (input.sig || []).slice(),
+      recordDate: input.recordDate || {}
+    };
+    merged.sig[cs.sigIndex] = prev.signed.trim();
+    const holdId = (Ranks2.HOLD_BY_NAME[rec.Hold] || {}).id || '';
+    try {
+      await Records.edit(cs.recordNo, merged, holdId, { username: 'hand of ' + (cs.toName || 'another party') });
+    } catch (e) {
+      return again(e.message);
+    }
+    Counter.finish(cs.id, 'Signed', { signedName: prev.signed.trim(), reply: prev.reply });
+    Notify.notifyUser(cs.by, `${prev.signed.trim()} set their hand to ${cs.recordNo}`, V.recUrl(cs.recordNo));
+    Activity.log(null, 'set their hand to', cs.recordNo, prev.signed.trim());
+    res.send(V.signDone({ title: 'It is done', text: `Your hand is set to ${cs.recordNo}. The document is sealed back into the Ministry’s record and ${cs.byName} has been told.`, today: res.locals.today }));
   }));
 
   app.get('/directory', (req, res) => {

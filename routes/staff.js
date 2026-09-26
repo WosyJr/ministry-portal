@@ -11,6 +11,7 @@ const Records = require('../lib/records');
 const Settings = require('../lib/settings');
 const Activity = require('../lib/activity');
 const Notify = require('../lib/notify');
+const Counter = require('../lib/countersign');
 const DocView = require('../lib/docview');
 const { BY_KEY } = require('../lib/forms');
 const { DEPTS, QUIZ } = require('../lib/content');
@@ -178,6 +179,22 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.json(byNo.concat(bySubject).slice(0, 12));
   }));
 
+  r.get('/record-brief', wrap(async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const wanted = splitNos(String(req.query.nos || '').slice(0, 400));
+    if (!wanted.length) return res.json([]);
+    const rows = await Records.visible(req.user);
+    if (!rows) return res.json([]);
+    const out = wanted.slice(0, 12).map(want => {
+      const p = Records.parseRecordNo(want);
+      const m = rows.find(x => x['Record No'].toLowerCase() === want.toLowerCase())
+        || (p && rows.find(x => String(x.Class).toLowerCase() === String(p.cls).toLowerCase() && parseInt(x.Number, 10) === p.n));
+      if (!m) return { asked: want, found: false };
+      return { asked: want, found: true, no: m['Record No'], subject: String(m.Subject || '').slice(0, 120), status: m.Status || '', hold: m.Hold || '', url: '/staff/records/' + encodeURIComponent(m['Record No']) };
+    });
+    res.json(out);
+  }));
+
   r.get('/search', wrap(async (req, res) => {
     const q = String(req.query.q || '').trim().slice(0, 80);
     let results = null;
@@ -206,7 +223,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     const linked = Records.links(rec).map(no => ({ no, row: rows.find(x => x['Record No'] === no && Records.canSee(req.user, x)) }));
     const id = Records.docId(rec);
     if (!Activity.loggedRecently(req.user.username, 'viewed', rec['Record No'], 10 * 60 * 1000)) Activity.log(req.user, 'viewed', rec['Record No']);
-    res.page({ title: rec['Record No'], active: 'docket', body: SV.recordPage(rec, { u: req.user, csrf: req.session.csrf, officers: U.list(), linked, history: Activity.recent({ target: rec['Record No'], limit: 40 }), docSrc: id ? `/staff/files/${encodeURIComponent(id)}/content` : '', m: Records.meta(rec) }) });
+    res.page({ title: rec['Record No'], active: 'docket', body: SV.recordPage(rec, { u: req.user, csrf: req.session.csrf, officers: U.list(), linked, history: Activity.recent({ target: rec['Record No'], limit: 40 }), docSrc: id ? `/staff/files/${encodeURIComponent(id)}/content` : '', m: Records.meta(rec), countersigns: Counter.forRecord(rec['Record No']), baseUrl: C.BASE_URL || '' }) });
   }));
 
   const recPost = (perm, fn) => [perm ? need(perm) : (req, res, next) => next(), checkCsrf, wrap(async (req, res) => {
@@ -241,6 +258,34 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     Activity.log(req.user, 'set the Hold', rec['Record No'], Records.holdOf(String(req.body.hold || '')) || 'none');
     return 'Hold set.';
   }));
+  r.post('/records/:no/countersign', ...recPost('status', async (req, rec) => {
+    const form = BY_KEY[rec.Form];
+    if (!form) throw new Error('This record was not filed through the hall and cannot be sent for a hand.');
+    const sigIndex = Math.max(0, Math.min((form.sig || []).length - 1, parseInt(req.body.sigIndex, 10) || 0));
+    const toUser = clean(req.body.toUser, 40);
+    const toName = clean(req.body.toName, 120);
+    if (!toUser && !toName) throw new Error('Name the person who must set their hand to it, or choose an officer.');
+    const target = toUser ? U.sessionUser(toUser) : null;
+    if (toUser && !target) throw new Error('No officer upon the rolls answers to that name.');
+    const cs = Counter.create({
+      recordNo: rec['Record No'], formKey: rec.Form, by: req.user.username, byName: req.user.name,
+      toUser: target ? target.username : '', toName: target ? target.name : toName,
+      role: (form.sig || [])[sigIndex] || '', sigIndex, note: clean(req.body.note, 600)
+    });
+    Activity.log(req.user, 'sent for a hand', rec['Record No'], cs.toName);
+    if (target) Notify.notifyUser(target.username, `${req.user.name} asks your hand upon ${rec['Record No']}`, '/sign/' + cs.token);
+    return target
+      ? `Laid before ${cs.toName}. It waits upon their desk.`
+      : `A private link is made for ${cs.toName}. Find it under “Awaiting a hand” on this record.`;
+  }));
+  r.post('/countersign/:id/withdraw', checkCsrf, wrap(async (req, res) => {
+    const cs = Counter.byId(req.params.id);
+    if (!cs || cs.by !== req.user.username) return not(res, 'No such request');
+    if (cs.status === 'Sent') Counter.finish(cs.id, 'Withdrawn');
+    req.session.flash = { text: 'The request is withdrawn.' };
+    res.redirect(V.recUrl(cs.recordNo));
+  }));
+
   r.post('/records/:no/link', ...recPost('status', async (req, rec) => {
     const [other] = await normalizeLinks([clean(req.body.other, 80)]);
     if (!other) throw new Error('No record upon the Docket answers to “' + clean(req.body.other, 80) + '”.');
