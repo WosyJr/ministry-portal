@@ -502,3 +502,28 @@ table.roster thead th{position:sticky;top:0;z-index:1}
 .warnav a[data-staff] .tabmark{font-size:9px;color:var(--blood);margin-left:5px;vertical-align:super}
 .warnav a[data-staff]{background:linear-gradient(to top,rgba(142,27,27,.09),transparent 60%)}
 .navkey{margin-left:auto;align-self:center;font-size:11.5px;color:var(--sepia);font-style:italic;white-space:nowrap;padding-left:12px}
+.partylist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.partylist .chip{text-decoration:none;padding:4px 10px;font-size:13px;letter-spacing:0;text-transform:none}
+.partylist .chip:hover{background:var(--blood);color:var(--parch);border-color:var(--blood)}
+details.inlinedit{display:inline-block}
+details.inlinedit>summary{list-style:none;cursor:pointer;display:inline-flex}
+details.inlinedit>summary::-webkit-details-marker{display:none}
+details.inlinedit .stack{margin-top:8px;min-width:230px;align-items:stretch}
+details.inlinedit .csf{width:100%;margin-bottom:6px}
+.cited{margin:6px 0 8px;padding:7px 11px;border-left:3px solid var(--blood);background:rgba(142,27,27,.07);font-size:13.5px}
+
+/* ---- Papers of Justice that may be given out ---- */
+.jusdoc{text-align:left}
+.jusdoc .eyebrow,.jusdoc .admin,.jusdoc .s-ministry,.jusdoc .s-orn,.jusdoc .s-hear,.jusdoc .s-title,.jusdoc .s-no{text-align:center}
+.jusdoc .s-hear{margin:26px 0 8px;border-top:1px solid var(--gold-soft);padding-top:14px}
+.docpre{margin:14px 0;line-height:1.7;font-size:16px}
+.docpre b{letter-spacing:.06em}
+.docbody{margin:10px 0 4px;line-height:1.75;white-space:pre-wrap;font-size:16px}
+.docfacts{display:grid;grid-template-columns:auto 1fr;gap:8px 18px;margin:22px 0;padding:18px 20px;border:1px solid var(--gold-soft);background:rgba(255,250,235,.55)}
+.docfacts dt{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--sepia);font-weight:600;align-self:baseline}
+.docfacts dd{margin:0;font-weight:600;color:var(--ink)}
+.docseal{margin-top:38px;padding-top:20px;border-top:1px solid var(--gold-soft);text-align:center}
+.docseal-line{font-style:italic;color:var(--sepia)}
+.docseal-name{font-family:var(--display);font-size:24px;margin-top:10px;border-bottom:1px solid var(--ink);display:inline-block;padding:0 34px 4px}
+.docseal-mark{margin-top:14px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+@media (max-width:560px){.docfacts{grid-template-columns:1fr;gap:2px 0}.docfacts dd{margin-bottom:10px}}

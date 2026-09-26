@@ -3,7 +3,9 @@ const WV = require('../lib/warviews');
 const W = require('../lib/waroffice');
 const A = require('../lib/auth');
 const Ranks = require('../lib/ranks');
+const U = require('../lib/users');
 const Activity = require('../lib/activity');
+const J = require('../lib/justice');
 
 module.exports = (app, { checkCsrf, wrap }) => {
   const canManage = u => !!u && (u.all || Ranks.can(u, 'warmanage'));
@@ -230,6 +232,20 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/war-office/writs');
   }));
 
+  app.get('/war-office/provost', seeRoster, wrap(async (req, res) => {
+    const mine = J.warrants().filter(w => ['Arrest', 'Seizure', 'Summons'].includes(w.kind)).reverse();
+    page(res, req, 'Warrants from Justice', 'waroffice', WV.provostPage(req.user, mine, req.session.csrf, canManage(req.user)));
+  }));
+
+  app.post('/war-office/provost/:id', manageRoster, checkCsrf, wrap(async (req, res) => {
+    try {
+      const w = J.warrantUpdate(String(req.params.id), req.body || {}, req.user);
+      Activity.log(req.user, 'made return upon a warrant of Justice', w.no, w.status);
+      req.session.flash = { text: `${w.no} is set down as ${w.status}.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/war-office/provost');
+  }));
+
   app.get('/war-office/treasury', seeRoster, wrap(async (req, res) => {
     page(res, req, 'The Legion Treasury', 'waroffice', WV.treasuryPage(req.user, req.session.csrf, canManage(req.user)));
   }));
@@ -247,5 +263,98 @@ module.exports = (app, { checkCsrf, wrap }) => {
     W.ledgerRemove(String(req.params.id));
     req.session.flash = { text: 'Struck from the ledger.' };
     res.redirect('/war-office/treasury');
+  }));
+
+  // ---- The staff entrance and the officers of the War Office ----
+
+  app.get('/war-office/entrance', wrap(async (req, res) => {
+    if (req.user && (req.user.all || Ranks.can(req.user, 'warroster') || Ranks.can(req.user, 'warmanage'))) return res.redirect('/war-office/roster');
+    page(res, req, 'Staff Entrance', 'waroffice', WV.entrance(req.session.csrf, '', ''));
+  }));
+
+  const isWarAdmin = u => Ranks.mayAdminBranch(u, 'war');
+  const needWarAdmin = (req, res, next) => {
+    if (!req.user) { req.session.returnTo = req.originalUrl; return res.redirect('/war-office/entrance'); }
+    return isWarAdmin(req.user) ? next() : next('forbidden');
+  };
+
+  const warRanks = () => Ranks.all().filter(r => Ranks.branchOf(r) === 'war');
+  const warRankIds = () => new Set(warRanks().map(r => r.id));
+  const warOfficers = () => { const ids = warRankIds(); return U.list().filter(o => ids.has(o.rank)); };
+  // No one may appoint above themselves: a rank is theirs to give only if they
+  // already hold every power it carries.
+  const giveable = u => u.all ? warRanks() : warRanks().filter(r => (r.perms || []).every(p => (u.perms || []).includes(p)));
+  const officersView = (req, res, issued, editing) =>
+    page(res, req, 'Officers of the War Office', 'waroffice',
+      WV.officersPage(req.user, warOfficers(), warRanks(), req.session.csrf, issued, editing, giveable(req.user)));
+
+  app.get('/war-office/officers', needWarAdmin, wrap(async (req, res) => {
+    const editing = req.query.rank ? warRanks().find(r => r.id === String(req.query.rank)) : null;
+    officersView(req, res, null, editing);
+  }));
+
+  app.post('/war-office/officers', needWarAdmin, checkCsrf, wrap(async (req, res) => {
+    const b = req.body || {};
+    const pw = U.tempPassword();
+    try {
+      if (!warRankIds().has(String(b.rank))) throw new Error('That rank does not belong to the Imperial War Office.');
+      if (!giveable(req.user).some(r => r.id === String(b.rank))) throw new Error('That rank carries powers you do not hold. You cannot appoint above yourself.');
+      U.create({ username: b.username, name: b.name, office: b.office, rank: b.rank, holds: [], password: pw });
+      Activity.log(req.user, 'entered an officer of the War Office', '', `${b.name} (${(Ranks.get(b.rank) || {}).name || ''})`);
+      return officersView(req, res, { username: String(b.username).trim().toLowerCase(), name: b.name, password: pw }, null);
+    } catch (e) {
+      req.session.flash = { err: true, text: e.message };
+      res.redirect('/war-office/officers');
+    }
+  }));
+
+  const guardWarOfficer = who => {
+    const target = U.view(who);
+    if (!target) throw new Error('No such officer.');
+    if (!warRankIds().has(target.rank)) throw new Error('That officer does not belong to the Imperial War Office.');
+    return target;
+  };
+
+  app.post('/war-office/officers/:username/toggle', needWarAdmin, checkCsrf, wrap(async (req, res) => {
+    try {
+      const t = guardWarOfficer(req.params.username);
+      U.update(t.username, { active: !t.active });
+      req.session.flash = { text: `${t.name} is ${t.active ? 'stood down' : 'restored to the rolls'}.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/war-office/officers');
+  }));
+
+  app.post('/war-office/officers/:username/password', needWarAdmin, checkCsrf, wrap(async (req, res) => {
+    try {
+      const t = guardWarOfficer(req.params.username);
+      const pw = U.tempPassword();
+      U.update(t.username, { password: pw, mustChange: true });
+      Activity.log(req.user, 'issued a new password to an officer of the War Office', '', t.name);
+      return officersView(req, res, { username: t.username, name: t.name, password: pw }, null);
+    } catch (e) {
+      req.session.flash = { err: true, text: e.message };
+      res.redirect('/war-office/officers');
+    }
+  }));
+
+  const rankPatch = b => ({
+    name: b.name, subtitle: b.subtitle, group: 'Imperial War Office', branch: 'war',
+    directory: !!b.directory, perms: [].concat(b.perms || [])
+  });
+
+  app.post('/war-office/ranks', needWarAdmin, checkCsrf, wrap(async (req, res) => {
+    try {
+      const r = Ranks.upsert(null, rankPatch(req.body || {}), req.user);
+      req.session.flash = { text: `${r.name} is made a rank of the War Office.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/war-office/officers');
+  }));
+
+  app.post('/war-office/ranks/:id', needWarAdmin, checkCsrf, wrap(async (req, res) => {
+    try {
+      const r = Ranks.upsert(String(req.params.id), rankPatch(req.body || {}), req.user);
+      req.session.flash = { text: `${r.name} is amended.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/war-office/officers');
   }));
 };

@@ -194,7 +194,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     const user = U.authenticate(username, String(req.body.password || ''));
     if (!user) { A.failed(key); return res.page({ title: 'Staff Entrance', body: V.loginPage(req.session.csrf, 'That name and password do not match the rolls.', username) }, 401); }
     A.succeeded(key);
-    const to = req.session.returnTo; req.session.returnTo = null;
+    const to = req.session.returnTo || String(req.body.to || ''); req.session.returnTo = null;
     req.session.csrf = crypto.randomBytes(18).toString('hex');
     req.session.username = user.username;
     Activity.log(user, 'entered the hall');
