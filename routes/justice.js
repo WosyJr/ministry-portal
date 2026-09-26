@@ -77,6 +77,60 @@ module.exports = (app, { checkCsrf, wrap }) => {
     }
   }));
 
+  app.get('/justice/offences', wrap(async (req, res) => {
+    const editing = req.query.edit && isAdmin(req.user) ? J.offenceGet(String(req.query.edit)) : null;
+    page(res, req, 'Book of Offences', JV.offencesPage(req.user, J.offences(), req.session.csrf, isAdmin(req.user), editing));
+  }));
+
+  app.post('/justice/offences', needAdmin, checkCsrf, wrap(async (req, res) => {
+    try { const o = J.offenceSave(null, req.body || {}); req.session.flash = { text: `${o.name} is entered in the Book of Offences.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/offences');
+  }));
+
+  app.post('/justice/offences/:id', needAdmin, checkCsrf, wrap(async (req, res) => {
+    try { const o = J.offenceSave(String(req.params.id), req.body || {}); req.session.flash = { text: `${o.name} is amended.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/offences');
+  }));
+
+  app.post('/justice/offences/:id/remove', needAdmin, checkCsrf, wrap(async (req, res) => {
+    J.offenceRemove(String(req.params.id));
+    req.session.flash = { text: 'Struck from the Book of Offences.' };
+    res.redirect('/justice/offences');
+  }));
+
+  app.get('/justice/warrants', seeCases, wrap(async (req, res) => {
+    page(res, req, 'Warrants', JV.warrantsPage(req.user, J.warrants().slice().reverse(), req.session.csrf, mayJudge(req.user), J.cases(), benchOfficers()));
+  }));
+
+  app.post('/justice/warrants', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    try {
+      const w = J.warrantIssue(req.body || {}, req.user);
+      Activity.log(req.user, 'issued a warrant', w.no, w.against);
+      req.session.flash = { text: `${w.no} is issued.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/warrants');
+  }));
+
+  app.post('/justice/warrants/:id', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
+    try {
+      const w = J.warrantUpdate(String(req.params.id), req.body || {}, req.user);
+      req.session.flash = { text: `${w.no} is set down as ${w.status}.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/warrants');
+  }));
+
+  app.post('/justice/warrants/:id/remove', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    J.warrantRemove(String(req.params.id));
+    req.session.flash = { text: 'The warrant is struck.' };
+    res.redirect('/justice/warrants');
+  }));
+
+  app.get('/justice/calendar', seeCases, wrap(async (req, res) => {
+    page(res, req, 'Calendar of Sittings', JV.calendarPage(req.user, J.calendar()));
+  }));
+
   app.get('/justice/cases', seeCases, wrap(async (req, res) => {
     page(res, req, 'The Bench', JV.docket(req.user, J.cases().slice().reverse(), J.tallies(), req.session.csrf, mayFile(req.user), benchOfficers()));
   }));
