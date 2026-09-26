@@ -81,5 +81,6 @@ app.use((err, req, res, next) => {
 });
 
 U.bootstrap();
+require('./lib/warseed').seedIfEmpty();
 if (require.main === module) app.listen(C.PORT, () => console.log(`Ministry portal listening on ${C.PORT}`));
 module.exports = app;

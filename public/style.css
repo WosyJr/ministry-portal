@@ -463,3 +463,23 @@ table.roster thead th{position:sticky;top:0;z-index:1}
 .warstat.hold .n{color:var(--gold)}
 .warstat.res{border-color:var(--quill)}
 .warstat.hold{border-color:var(--gold)}
+.histlist{list-style:none;margin:8px 0 0;padding:0}
+.histlist li{display:grid;grid-template-columns:96px 104px 1fr;gap:10px;align-items:baseline;padding:8px 10px;border-left:3px solid var(--line);background:rgba(246,237,214,.55);margin-bottom:5px;font-size:14.5px}
+.histlist .h-when{color:var(--sepia);font-size:12.5px;font-variant-numeric:tabular-nums}
+.histlist .h-kind{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.histlist li.h-promotion{border-left-color:var(--blood)}
+.histlist li.h-writ{border-left-color:var(--quill)}
+.histlist li.h-entered{border-left-color:var(--ok)}
+.promo{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--blood);padding:13px 15px;margin-bottom:10px}
+.promo-head{font-size:16px;margin-bottom:3px}
+.quota-met{color:var(--ok);font-weight:600}
+.quota-short{color:var(--blood);font-weight:600}
+.qnum{width:64px;font-family:var(--body);font-size:14px;padding:4px 6px;border:1px solid var(--line);background:#FBF7EC;color:var(--ink)}
+@media(max-width:640px){.histlist li{grid-template-columns:1fr;gap:2px}}
+.holdings{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:6px}
+.holding-card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--gold);padding:14px 16px}
+.holding-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.holding-head h3{margin:0;font-family:var(--display);font-weight:400;font-size:20px;color:var(--blood);line-height:1.15}
+.holding-sub{font-style:italic;color:var(--sepia);font-size:13.5px;margin-top:2px}
+.holding-card .meta{margin-top:10px}
+.holding-notes{margin:10px 0 0;font-size:14px;color:var(--sepia)}
