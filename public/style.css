@@ -459,3 +459,7 @@ td.actions-col .btn{margin-bottom:2px}
 .dir-other.war{border-top:3px solid var(--blood);padding-top:14px}
 tr.rankrow td{background:var(--parch-3);border-top:2px solid var(--gold-soft);font-family:var(--display);font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--sepia);padding:7px 8px}
 table.roster thead th{position:sticky;top:0;z-index:1}
+.warstat.res .n{color:var(--quill)}
+.warstat.hold .n{color:var(--gold)}
+.warstat.res{border-color:var(--quill)}
+.warstat.hold{border-color:var(--gold)}
