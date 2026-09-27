@@ -107,12 +107,20 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     catch (e) { toMonth(req, res, key, '', e.message); }
   }));
 
-  app.get('/finance/months/:key/income/holds', seeLedger, needManage, wrap(async (req, res) => {
+  // Draw an income line from the rolls rather than typing it.
+  app.get('/finance/months/:key/income/from', seeLedger, needManage, wrap(async (req, res) => {
     const key = String(req.params.key);
+    const line = String(req.query.line || '');
+    const span = String(req.query.span || 'this');
     try {
+      if (!['tax', 'mint', 'other'].includes(line)) throw new Error('That line is not kept by the rolls.');
       F.monthEnsure(key, req.user);
-      F.monthSaveIncome(key, { tax: F.holdsDue() }, req.user);
-      req.session.flash = { text: `Hold taxes set to ${F.holdsDue().toLocaleString('en-US')} — what the Holds owe.` };
+      const r = F.fromRolls(key)[line];
+      const v = span === 'prev' ? r.prev : span === 'due' ? r.due : r.rolls;
+      if (v === undefined) throw new Error('The rolls say nothing for that.');
+      F.monthSaveIncome(key, { [line]: v }, req.user);
+      const label = (F.INCOME_KINDS.find(k => k[0] === line) || [])[1] || line;
+      req.session.flash = { text: `${label} set to ${v.toLocaleString('en-US')} from the rolls.` };
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
     res.redirect('/finance/months/' + key);
   }));
@@ -277,6 +285,117 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   app.post('/finance/holds/:id/remove', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
     F.holdRemove(String(req.params.id));
     toSettings(req, res, 'The Hold is struck from the roll.');
+  }));
+
+
+  // ---- Assessments and arrears ----
+
+  const mayTax = u => !!u && (u.all || Ranks.can(u, 'fintax'));
+  const mayCharter = u => !!u && (u.all || Ranks.can(u, 'fincharter'));
+  const mayMint = u => !!u && (u.all || Ranks.can(u, 'finmint'));
+  const needTax = (req, res, next) => mayTax(req.user) ? next() : next('forbidden');
+  const needCharter = (req, res, next) => mayCharter(req.user) ? next() : next('forbidden');
+  const needMint = (req, res, next) => mayMint(req.user) ? next() : next('forbidden');
+  const census = req => ({ tax: mayTax(req.user), charter: mayCharter(req.user), mint: mayMint(req.user) });
+
+  app.get('/finance/assessments', seeLedger, wrap(async (req, res) => {
+    const q = String(req.query.q || '').slice(0, 60).toLowerCase();
+    let list = F.assessments().slice().reverse();
+    if (q) list = list.filter(a => (a.who + ' ' + a.trade + ' ' + a.hold + ' ' + a.kind).toLowerCase().includes(q));
+    page(res, req, 'Assessments & Arrears', FV.assessmentsPage(req.user, list, F.taxTotals(), F.byHold(), req.session.csrf, census(req), { q }));
+  }));
+
+  app.post('/finance/assessments', seeLedger, needTax, checkCsrf, wrap(async (req, res) => {
+    try { const a = F.assessAdd(req.body || {}, req.user); Activity.log(req.user, 'assessed a sum', a.no, a.who); req.session.flash = { text: `${a.no} is set down against ${a.who}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/assessments');
+  }));
+
+  app.post('/finance/assessments/:id/render', seeLedger, needTax, checkCsrf, wrap(async (req, res) => {
+    try {
+      const a = F.assessRender(String(req.params.id), req.body || {}, req.user);
+      req.session.flash = { text: `Entered. ${F.arrearsOn(a).toLocaleString('en-US')} still in arrears upon ${a.no}.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/assessments');
+  }));
+
+  app.post('/finance/assessments/:id/payment/:pid/remove', seeLedger, needTax, checkCsrf, wrap(async (req, res) => {
+    F.assessPaymentRemove(String(req.params.id), String(req.params.pid));
+    req.session.flash = { text: 'The entry is struck.' };
+    res.redirect('/finance/assessments');
+  }));
+
+  app.post('/finance/assessments/:id', seeLedger, needTax, checkCsrf, wrap(async (req, res) => {
+    try { const a = F.assessUpdate(String(req.params.id), { ...(req.body || {}), remitted: !!(req.body || {}).remitted }); req.session.flash = { text: a.remitted ? `${a.no} is remitted.` : `${a.no} stands again.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/assessments');
+  }));
+
+  app.post('/finance/assessments/:id/remove', seeLedger, needTax, checkCsrf, wrap(async (req, res) => {
+    F.assessRemove(String(req.params.id));
+    req.session.flash = { text: 'Struck from the roll.' };
+    res.redirect('/finance/assessments');
+  }));
+
+  // ---- Charters ----
+
+  app.get('/finance/register', wrap(async (req, res) => {
+    const q = String(req.query.q || '').slice(0, 60).toLowerCase();
+    let list = F.chartersPublic();
+    if (q) list = list.filter(c => (c.holder + ' ' + c.house + ' ' + c.trade + ' ' + c.hold + ' ' + c.kind + ' ' + c.no).toLowerCase().includes(q));
+    page(res, req, 'Register of Charters', FV.registerPage(req.user, list, String(req.query.q || '')));
+  }));
+
+  app.get('/finance/charters', seeLedger, wrap(async (req, res) => {
+    page(res, req, 'Charters', FV.chartersPage(req.user, F.charters().slice().reverse(), F.charterTotals(), req.session.csrf, census(req)));
+  }));
+
+  app.post('/finance/charters', seeLedger, needCharter, checkCsrf, wrap(async (req, res) => {
+    try { const c = F.charterGrant(req.body || {}, req.user); Activity.log(req.user, 'granted a charter', c.no, c.holder); req.session.flash = { text: `${c.no} is granted to ${c.holder}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/charters');
+  }));
+
+  app.post('/finance/charters/:id', seeLedger, needCharter, checkCsrf, wrap(async (req, res) => {
+    try { const c = F.charterUpdate(String(req.params.id), req.body || {}, req.user); req.session.flash = { text: `${c.no} is set down as ${c.status}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/charters');
+  }));
+
+  app.post('/finance/charters/:id/remove', seeLedger, needCharter, checkCsrf, wrap(async (req, res) => {
+    F.charterRemove(String(req.params.id));
+    req.session.flash = { text: 'The charter is struck from the register.' };
+    res.redirect('/finance/charters');
+  }));
+
+  // ---- The Mint ----
+
+  app.get('/finance/mint', seeLedger, wrap(async (req, res) => {
+    page(res, req, 'The Imperial Mint', FV.mintPage(req.user, F.mint().slice().reverse(), F.assays().slice().reverse(), F.mintTotals(), req.session.csrf, census(req)));
+  }));
+
+  app.post('/finance/mint', seeLedger, needMint, checkCsrf, wrap(async (req, res) => {
+    try { const e = F.mintAdd(req.body || {}, req.user); Activity.log(req.user, 'entered upon the Mint roll', e.no, e.kind); req.session.flash = { text: `${e.no} is entered.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/mint');
+  }));
+
+  app.post('/finance/mint/:id/remove', seeLedger, needMint, checkCsrf, wrap(async (req, res) => {
+    F.mintRemove(String(req.params.id));
+    req.session.flash = { text: 'Struck from the Mint roll.' };
+    res.redirect('/finance/mint');
+  }));
+
+  app.post('/finance/assays', seeLedger, needMint, checkCsrf, wrap(async (req, res) => {
+    try { const a = F.assayAdd(req.body || {}, req.user); Activity.log(req.user, 'made an assay', a.no, a.result); req.session.flash = { text: `${a.no}: ${a.result}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/mint');
+  }));
+
+  app.post('/finance/assays/:id/remove', seeLedger, needMint, checkCsrf, wrap(async (req, res) => {
+    F.assayRemove(String(req.params.id));
+    req.session.flash = { text: 'The assay is struck.' };
+    res.redirect('/finance/mint');
   }));
 
   // ---- Bank logins: the Minister alone ----

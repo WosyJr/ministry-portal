@@ -614,3 +614,7 @@ tr.totalrow td{border-top:2px solid var(--gold);background:rgba(217,190,132,.18)
 .principle p{margin:0;line-height:1.7;color:var(--sepia);max-width:74ch}
 .dots{letter-spacing:.2em;color:var(--sepia)}
 .tone-mint{border-left-color:#3E8A5A}
+.rollsay{display:block;margin-top:6px;font-size:12.5px;color:var(--sepia);line-height:1.5}
+.rollsay b{color:var(--ink)}
+.rollsay .linkrow{margin-top:4px;gap:5px;flex-wrap:wrap}
+.rollsay .btn.small{font-size:11.5px;padding:2px 8px}
