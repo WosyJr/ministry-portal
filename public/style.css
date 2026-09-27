@@ -584,3 +584,6 @@ table.rpt td{text-align:right;font-weight:600;padding:6px 0;border-bottom:1px so
 .faqitem[open] summary::before{content:'\2212'}
 .faqitem[open] summary{color:var(--blood)}
 .faqitem p{margin:0 0 16px 28px;line-height:1.7;color:var(--sepia);max-width:70ch}
+.chip.standing{border-color:var(--quill);color:var(--quill);background:rgba(58,74,110,.10)}
+.movebar{display:flex;gap:6px;align-items:center;margin:0}
+.movebar select{font-size:13.5px;padding:4px 6px;max-width:170px}

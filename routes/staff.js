@@ -10,6 +10,7 @@ const Ranks = require('../lib/ranks');
 const Records = require('../lib/records');
 const Settings = require('../lib/settings');
 const Activity = require('../lib/activity');
+const People = require('../lib/people');
 const Notify = require('../lib/notify');
 const Counter = require('../lib/countersign');
 const DocView = require('../lib/docview');
@@ -43,7 +44,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     const drafts = S.read('drafts.json', []).filter(d => d.by === u.username).sort((a, b) => b.at.localeCompare(a.at));
     const d = { drafts, counts: [] };
     if (rows) {
-      d.assigned = rows.filter(x => x['Assigned To'] === u.username && !Records.isClosed(x)).reverse();
+      d.assigned = rows.filter(x => x['Assigned To'] === u.username && Records.needsHand(x)).reverse();
       d.returned = rows.filter(x => x.Status === 'Returned' && Records.meta(x).filer === u.username).reverse();
       if (A.can(u, 'docket') || A.can(u, 'allrecords')) d.recent = rows.slice(-8).reverse();
       if (A.can(u, 'approve')) d.counts.push([rows.filter(x => x.Status === 'Awaiting Seal').length, 'awaiting a seal', '/staff/approvals']);
@@ -55,6 +56,83 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     if (A.can(u, 'request')) d.requests = Records.requests().filter(q => q.by === u.username).reverse().slice(0, 8);
     if (A.can(u, 'bulletin')) d.bulletin = S.read('bulletin.json', []).sort((a, b) => (b.pinned - a.pinned) || b.at.localeCompare(a.at)).slice(0, 3);
     res.page({ title: 'My Desk', active: 'desk', body: SV.desk(u, d), flash: !G.connected() && u.all ? { err: true, html: 'The Ministry archives are not connected to Google yet. <a href="/admin/settings">Connect them in the Study</a>.' } : null });
+  }));
+
+
+
+  // ---- The person index ----
+
+  r.get('/people', need('docket', 'allrecords', 'petitions'), wrap(async (req, res) => {
+    const u = req.user;
+    const name = String(req.query.name || '').slice(0, 120);
+    const q = String(req.query.q || '').slice(0, 80);
+    const rows = (await Records.visible(u)) || [];
+
+    if (name) {
+      const p = People.record(rows, Records.meta, name);
+      if (!p) return not(res, 'No such person', 'No record your rank may read names that person.');
+      return res.page({ title: p.name, active: 'people', body: SV.personPage(u, p, U.list()) });
+    }
+    let people = People.list(rows, Records.meta);
+    if (q) { const n = q.toLowerCase(); people = people.filter(x => x.name.toLowerCase().includes(n)); }
+    res.page({ title: 'Person Index', active: 'people', body: SV.peopleIndex(u, people, q) });
+  }));
+
+  r.get('/people-suggest', need('docket', 'allrecords', 'petitions'), wrap(async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const rows = (await Records.visible(req.user)) || [];
+    res.json(People.suggest(rows, Records.meta, String(req.query.q || '')));
+  }));
+
+  // ---- Officers and their desks ----
+
+  const seeDesks = need('docket', 'allrecords', 'officers');
+
+  r.get('/officers', seeDesks, wrap(async (req, res) => {
+    const u = req.user;
+    const rows = (await Records.visible(u)) || [];
+    const officers = U.list().filter(o => Ranks.branchOf(Ranks.get(o.rank)) === 'civil')
+      .sort((a, b) => (b.active - a.active) || String(a.name).localeCompare(String(b.name)));
+    const stats = {};
+    officers.forEach(o => { stats[o.username] = { hand: 0, filed: 0, returned: 0, seal: 0 }; });
+    rows.forEach(x => {
+      const a = stats[x['Assigned To']];
+      if (a && Records.needsHand(x)) a.hand++;
+      const filer = Records.meta(x).filer;
+      const f = stats[filer];
+      if (f) {
+        f.filed++;
+        if (x.Status === 'Returned') f.returned++;
+        if (x.Status === 'Awaiting Seal') f.seal++;
+      }
+    });
+    res.page({ title: 'Officers', active: 'docket', body: SV.officerList(u, officers, Ranks.all(), stats) });
+  }));
+
+  r.get('/officers/:username', seeDesks, wrap(async (req, res) => {
+    const u = req.user;
+    const p = U.view(String(req.params.username));
+    if (!p) return not(res, 'No such officer', 'No one upon the rolls answers to that name.');
+    if (Ranks.branchOf(Ranks.get(p.rank)) !== 'civil') {
+      return res.say('Another Ministry', 'That officer keeps another Ministry. Their desk is not kept here.', 404);
+    }
+    // Only ever the records the VIEWER may read — never everything the
+    // officer themselves can see.
+    const rows = (await Records.visible(u)) || [];
+    const mine = rows.filter(x => Records.meta(x).filer === p.username);
+    const d = {
+      assigned: rows.filter(x => x['Assigned To'] === p.username && Records.needsHand(x)).reverse(),
+      returned: mine.filter(x => x.Status === 'Returned').reverse(),
+      awaiting: mine.filter(x => x.Status === 'Awaiting Seal').reverse(),
+      standing: rows.filter(x => Records.isStanding(x) && (Records.meta(x).filer === p.username || x['Assigned To'] === p.username)).reverse(),
+      filed: mine.slice().reverse(),
+      drafts: S.read('drafts.json', []).filter(x => x.by === p.username).length,
+      officers: U.list(),
+      history: Activity.recent({ who: p.username, limit: 15 }),
+      mayMove: A.can(u, 'status'),
+      csrf: req.session.csrf
+    };
+    res.page({ title: p.name, active: 'docket', body: SV.officerDesk(u, p, d) });
   }));
 
   r.get('/clerk', need('clerk'), (req, res) => {
@@ -138,14 +216,14 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     const d = DEPTS.find(x => x.id === req.params.id && (req.user.depts || []).includes(x.id));
     if (!d) return not(res, 'No such office', 'That office is not open to your rank.');
     const rows = await Records.visible(req.user);
-    const open = rows && rows.filter(x => d.folders.includes(Records.folderKey(x)) && !Records.isClosed(x)).reverse().slice(0, 25);
+    const open = rows && rows.filter(x => d.folders.includes(Records.folderKey(x)) && Records.needsHand(x)).reverse().slice(0, 25);
     res.page({ title: d.title, active: 'offices', body: SV.office(d, req.user, open) });
   }));
 
   r.get('/docket', need('docket', 'allrecords'), wrap(async (req, res) => {
     const u = req.user;
     const q = String(req.query.q || '').slice(0, 80).toLowerCase();
-    const f = { cls: String(req.query.class || '').slice(0, 60), status: String(req.query.status || ''), hold: String(req.query.hold || ''), who: String(req.query.who || '') };
+    const f = { cls: String(req.query.class || '').slice(0, 60), status: String(req.query.status || ''), hold: String(req.query.hold || ''), who: String(req.query.who || ''), show: String(req.query.show || '') };
     let rows = await Records.visible(u);
     const classes = rows ? [...new Set(rows.map(x => x.Class))].sort() : [];
     if (rows) {
@@ -156,6 +234,9 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       if (f.hold) rows = rows.filter(x => x.Hold === f.hold);
       if (f.who === 'me') rows = rows.filter(x => x['Assigned To'] === u.username);
       if (f.who === 'none') rows = rows.filter(x => !x['Assigned To']);
+      if (f.show === 'live') rows = rows.filter(x => Records.needsHand(x));
+      else if (f.show === 'standing') rows = rows.filter(x => Records.isStanding(x));
+      else if (f.show !== 'all') rows = rows.filter(x => !Records.isClosed(x));
       rows = rows.slice(0, 400);
     }
     res.page({ title: 'Docket', active: 'docket', body: SV.docketPage(rows, u, req.query.q, f, classes, U.list()) });
@@ -261,15 +342,19 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   r.post('/records/:no/countersign', ...recPost('status', async (req, rec) => {
     const form = BY_KEY[rec.Form];
     if (!form) throw new Error('This record was not filed through the hall and cannot be sent for a hand.');
-    const sigIndex = Math.max(0, Math.min((form.sig || []).length - 1, parseInt(req.body.sigIndex, 10) || 0));
+    const raw = String(req.body.sigIndex || '');
+    const noHand = raw === '' || raw === 'none';
+    const sigIndex = noHand ? null : Math.max(0, Math.min((form.sig || []).length - 1, parseInt(raw, 10) || 0));
     const toName = clean(req.body.toName, 120);
-    if (!toName) throw new Error('Name the person who must set their hand to it.');
+    if (!toName) throw new Error('Name the person who must fill it in.');
     const cs = Counter.create({
       recordNo: rec['Record No'], formKey: rec.Form, by: req.user.username, byName: req.user.name,
-      toUser: '', toName, role: (form.sig || [])[sigIndex] || '', sigIndex, note: clean(req.body.note, 600)
+      toUser: '', toName, role: noHand ? '' : ((form.sig || [])[sigIndex] || ''), sigIndex, note: clean(req.body.note, 600)
     });
-    Activity.log(req.user, 'made a signing link', rec['Record No'], toName);
-    return `A signing link is made for ${toName}. Copy it below and send it to them.`;
+    Activity.log(req.user, noHand ? 'sent a writ out to be filled in' : 'made a signing link', rec['Record No'], toName);
+    return noHand
+      ? `A link is made for ${toName} to fill in their part. Copy it below and send it to them. They set no hand to it.`
+      : `A signing link is made for ${toName}. Copy it below and send it to them.`;
   }));
   r.post('/countersign/:id/withdraw', checkCsrf, wrap(async (req, res) => {
     const cs = Counter.byId(req.params.id);
@@ -387,7 +472,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     Ranks.HOLDS.forEach(h => { c[h.name] = { open: 0, petitions: 0, lastDispatch: null }; });
     (rows || []).forEach(x => {
       const k = c[x.Hold]; if (!k) return;
-      if (!Records.isClosed(x)) { k.open++; if (x.Class === 'Petition') k.petitions++; }
+      if (Records.needsHand(x)) { k.open++; if (x.Class === 'Petition') k.petitions++; }
       if (x.Form === 'dispatch') k.lastDispatch = x;
     });
     return c;
@@ -406,7 +491,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       d.petitions = here.filter(x => x.Class === 'Petition' && !Records.isClosed(x));
       d.dispatches = here.filter(x => x.Form === 'dispatch').slice(0, 10);
       d.notices = here.filter(x => x.Form === 'notice').slice(0, 10);
-      d.open = here.filter(x => !Records.isClosed(x) && x.Class !== 'Petition' && x.Form !== 'dispatch' && x.Form !== 'notice');
+      d.open = here.filter(x => Records.needsHand(x) && x.Class !== 'Petition' && x.Form !== 'dispatch' && x.Form !== 'notice');
     }
     res.page({ title: h.name, active: 'holds', body: SV.holdPage(h, d, req.user) });
   }));
@@ -606,7 +691,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     const week = rows.filter(x => Date.parse(x['Filed At (UTC)']) >= since);
     const tally = (list, key) => list.reduce((m, x) => { const k = typeof key === 'function' ? key(x) : x[key]; if (k) m[k] = (m[k] || 0) + 1; return m; }, {});
     const acts = Activity.recent({ since: new Date(since).toISOString(), limit: 5000 }).filter(a => a.who);
-    const open = rows.filter(x => !Records.isClosed(x));
+    const open = rows.filter(x => Records.needsHand(x));
     const s = {
       todayText: res.locals.today.text, filed: week.length, petitions: week.filter(x => x.Class === 'Petition').length,
       closed: rows.filter(x => Date.parse(x['Closed At (UTC)']) >= since).length, open: open.length,

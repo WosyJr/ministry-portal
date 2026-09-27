@@ -170,11 +170,12 @@ module.exports = (app, { checkCsrf, wrap }) => {
       Activity.log(null, 'declined to sign', cs.recordNo, cs.toName);
       return res.send(V.signDone({ title: 'Declined', text: 'Your answer is entered upon the Ministry’s record and the officer who asked has been told.', today: res.locals.today }));
     }
-    if (!prev.signed.trim()) return again('Set down your name and office before you sign.');
+    const noHand = cs.sigIndex === null || cs.sigIndex === undefined;
+    if (!prev.signed.trim()) return again(noHand ? 'Set down your name before you return it.' : 'Set down your name and office before you sign.');
     const owed = blanks.filter(bl => bl.required && !(bl.type === 'date'
       ? ((b.d || {})[bl.id] || {}).day
       : String(((b.f || {})[bl.id]) || '').trim())).map(bl => bl.label);
-    if (owed.length) return again('Before you set your hand to it, answer: ' + owed.join(', ') + '.');
+    if (owed.length) return again((noHand ? 'Before you return it, answer: ' : 'Before you set your hand to it, answer: ') + owed.join(', ') + '.');
 
     const merged = {
       f: { ...(input.f || {}), ...(b.f || {}) },
@@ -183,17 +184,25 @@ module.exports = (app, { checkCsrf, wrap }) => {
       sig: (input.sig || []).slice(),
       recordDate: input.recordDate || {}
     };
-    merged.sig[cs.sigIndex] = prev.signed.trim();
+    if (!noHand) merged.sig[cs.sigIndex] = prev.signed.trim();
     const holdId = (Ranks2.HOLD_BY_NAME[rec.Hold] || {}).id || '';
     try {
       await Records.edit(cs.recordNo, merged, holdId, { username: 'hand of ' + (cs.toName || 'another party') });
     } catch (e) {
       return again(e.message);
     }
-    Counter.finish(cs.id, 'Signed', { signedName: prev.signed.trim(), reply: prev.reply });
-    Notify.notifyUser(cs.by, `${prev.signed.trim()} set their hand to ${cs.recordNo}`, V.recUrl(cs.recordNo));
-    Activity.log(null, 'set their hand to', cs.recordNo, prev.signed.trim());
-    res.send(V.signDone({ title: 'It is done', text: `Your hand is set to ${cs.recordNo}. The document is sealed back into the Ministry’s record and ${cs.byName} has been told.`, today: res.locals.today }));
+    Counter.finish(cs.id, noHand ? 'Returned' : 'Signed', { signedName: prev.signed.trim(), reply: prev.reply });
+    Notify.notifyUser(cs.by, noHand
+      ? `${prev.signed.trim()} filled in and returned ${cs.recordNo}`
+      : `${prev.signed.trim()} set their hand to ${cs.recordNo}`, V.recUrl(cs.recordNo));
+    Activity.log(null, noHand ? 'filled in and returned' : 'set their hand to', cs.recordNo, prev.signed.trim());
+    res.send(V.signDone({
+      title: noHand ? 'It is returned' : 'It is done',
+      text: noHand
+        ? `What you set down is entered upon ${cs.recordNo} and ${cs.byName} has been told. You set no hand to it — the Ministry signs it from its own side.`
+        : `Your hand is set to ${cs.recordNo}. The document is sealed back into the Ministry’s record and ${cs.byName} has been told.`,
+      today: res.locals.today
+    }));
   }));
 
   app.get('/directory', (req, res) => {
