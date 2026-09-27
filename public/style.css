@@ -557,3 +557,30 @@ table.rpt td{text-align:right;font-weight:600;padding:6px 0;border-bottom:1px so
 .warnav.staffrow a{color:var(--sepia)}
 .warnav.staffrow a.on{color:var(--blood)}
 @media(max-width:640px){.warnav.staffrow .rowlead{width:100%;padding-bottom:4px}}
+
+/* ---- Record lookup: browse and filter ---- */
+.rfilters{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+.rfilters .rfilter{display:inline-block;padding:5px 13px;border:1px solid var(--gold-soft);border-radius:2px;font-size:13.5px;color:var(--sepia);text-decoration:none;background:rgba(246,237,214,.5)}
+.rfilters .rfilter:hover{border-color:var(--gold);color:var(--ink)}
+.rfilters .rfilter.on{background:var(--blood);border-color:var(--blood);color:#FFF6E6;font-weight:600}
+
+/* ---- Questions & Answers ---- */
+.guiderow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:14px 0 8px}
+.guidetile{display:block;padding:18px 20px;border:1px solid var(--gold-soft);background:rgba(246,237,214,.55);text-decoration:none;color:var(--ink);border-radius:2px;transition:border-color .15s,background .15s}
+.guidetile:hover{border-color:var(--gold);background:rgba(246,237,214,.9)}
+.guidetile .gt-h{display:block;font-family:var(--display);font-size:20px;color:var(--blood);margin-bottom:6px}
+.guidetile .gt-b{display:block;font-size:14.5px;color:var(--sepia);line-height:1.55}
+.askgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px}
+.askcard{border:1px solid var(--gold-soft);border-left:3px solid var(--gold);background:rgba(246,237,214,.45);padding:16px 18px}
+.askcard .ask-want{font-family:var(--display);font-size:19px;line-height:1.25;color:var(--ink);margin-bottom:8px}
+.askcard .ask-how{font-size:14.5px;color:var(--sepia);margin-bottom:10px}
+.askcard .ask-back{font-size:14px;line-height:1.6;border-top:1px dashed var(--gold-soft);padding-top:9px}
+.askcard .ask-lead{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:3px}
+.faq{margin-top:12px;max-width:860px}
+.faqitem{border-bottom:1px solid var(--gold-soft)}
+.faqitem summary{cursor:pointer;padding:13px 4px;font-family:var(--display);font-size:19px;color:var(--ink);list-style:none}
+.faqitem summary::-webkit-details-marker{display:none}
+.faqitem summary::before{content:'+';color:var(--gold);font-family:var(--body);font-weight:700;margin-right:12px}
+.faqitem[open] summary::before{content:'\2212'}
+.faqitem[open] summary{color:var(--blood)}
+.faqitem p{margin:0 0 16px 28px;line-height:1.7;color:var(--sepia);max-width:70ch}

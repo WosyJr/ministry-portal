@@ -13,6 +13,7 @@ const Counter = require('../lib/countersign');
 const Notify = require('../lib/notify');
 const Ranks2 = require('../lib/ranks');
 const { formatDate } = require('../lib/skyrim');
+const { ROUTES } = require('../lib/content');
 
 module.exports = (app, { checkCsrf, wrap }) => {
   async function publicRows() {
@@ -87,16 +88,54 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.page({ title: 'Petition status', active: 'petition', body: V.petitionStatus(q, result) });
   }));
 
+  const publicOnly = rows => (rows || []).filter(r => r.Public === 'Yes');
+  const newestFirst = rows => rows.slice().reverse();
+
+  app.get('/guide', wrap(async (req, res) => {
+    res.page({ title: 'Questions & Answers', active: 'guide', body: V.publicGuide(ROUTES) });
+  }));
+
   app.get('/records', wrap(async (req, res) => {
     const q = String(req.query.q || '').trim().slice(0, 80);
+    const cls = String(req.query.class || '').trim().slice(0, 40);
     const rows = await publicRows();
+    const open = rows === null ? null : newestFirst(publicOnly(rows));
+
+    const classes = [];
+    if (open) {
+      const seen = new Map();
+      open.forEach(r => { const c = String(r.Class || '').trim(); if (c) seen.set(c, (seen.get(c) || 0) + 1); });
+      Array.from(seen.entries()).sort((a, b) => b[1] - a[1]).forEach(([name, n]) => classes.push({ name, n }));
+    }
+
     let results;
     if (q) {
       if (!A.rateLimit('reclookup|' + req.ip, 40, 10 * 60 * 1000)) return res.say('Too many searches', 'Wait a little and search again.', 429);
       const needle = q.toLowerCase();
-      results = rows === null ? null : rows.filter(r => r.Public === 'Yes' && [r['Record No'], r.Subject, r.Summary, r.Hold, r.Class].some(v => String(v || '').toLowerCase().includes(needle))).slice(0, 40);
+      results = open === null ? null : open.filter(r => [r['Record No'], r.Subject, r.Summary, r.Hold, r.Class].some(v => String(v || '').toLowerCase().includes(needle))).slice(0, 40);
     }
-    res.page({ title: 'Record Lookup', active: 'records', body: V.recordLookup(q, results) });
+
+    const recent = open === null ? [] : (cls ? open.filter(r => String(r.Class || '') === cls) : open).slice(0, 24);
+    res.page({ title: 'Record Lookup', active: 'records', body: V.recordLookup(q, results, { classes, recent, cls }) });
+  }));
+
+  app.get('/records/suggest', wrap(async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const q = String(req.query.q || '').trim().slice(0, 60);
+    if (q.length < 2) return res.json([]);
+    if (!A.rateLimit('recsugpub|' + req.ip, 120, 60 * 1000)) return res.json([]);
+    const rows = await publicRows();
+    if (rows === null) return res.json([]);
+    const needle = q.toLowerCase();
+    const byNo = [], bySubject = [];
+    for (const r of newestFirst(publicOnly(rows))) {
+      const no = String(r['Record No'] || '');
+      const subject = String(r.Subject || '');
+      if (no.toLowerCase().includes(needle)) byNo.push({ no, subject: subject.slice(0, 70) });
+      else if ((subject + ' ' + (r.Hold || '') + ' ' + (r.Class || '')).toLowerCase().includes(needle)) bySubject.push({ no, subject: subject.slice(0, 70) });
+      if (byNo.length >= 12) break;
+    }
+    res.json(byNo.concat(bySubject).slice(0, 12));
   }));
 
   async function signCtx(req, res) {

@@ -584,6 +584,24 @@ module.exports = (app, { checkCsrf, wrap }) => {
     return target;
   };
 
+  app.post('/justice/officers/:username', needAdmin, checkCsrf, wrap(async (req, res) => {
+    const b = req.body || {};
+    try {
+      const t = guardOfficer(req, req.params.username);
+      const patch = { name: b.name, office: b.office, listed: !!b.listed };
+      const want = String(b.rank || '');
+      if (want && want !== t.rank) {
+        if (!jusRankIds().has(want)) throw new Error('That rank does not belong to the Ministry of Justice.');
+        if (!giveable(req.user).some(r => r.id === want)) throw new Error('That rank carries powers you do not hold. You cannot appoint above yourself.');
+        patch.rank = want;
+      }
+      const after = U.update(t.username, patch);
+      Activity.log(req.user, 'amended an officer of Justice', '', `${after.name} (${(Ranks.get(after.rank) || {}).name || ''})`);
+      req.session.flash = { text: `${after.name} is amended.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/officers');
+  }));
+
   app.post('/justice/officers/:username/toggle', needAdmin, checkCsrf, wrap(async (req, res) => {
     try {
       const t = guardOfficer(req, req.params.username);
