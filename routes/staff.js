@@ -70,12 +70,24 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
 
     if (name) {
       const p = People.record(rows, Records.meta, name);
-      if (!p) return not(res, 'No such person', 'No record your rank may read names that person.');
-      return res.page({ title: p.name, active: 'people', body: SV.personPage(u, p, U.list()) });
+      if (!p) return not(res, 'No such party', 'No record your rank may read names that party.');
+      const ctx = U.list(); ctx.csrf = req.session.csrf;
+      return res.page({ title: p.name, active: 'people', body: SV.personPage(u, p, ctx) });
     }
+    const show = ['people', 'others', 'all'].includes(String(req.query.show || '')) ? String(req.query.show) : 'people';
     let people = People.list(rows, Records.meta);
     if (q) { const n = q.toLowerCase(); people = people.filter(x => x.name.toLowerCase().includes(n)); }
-    res.page({ title: 'Person Index', active: 'people', body: SV.peopleIndex(u, people, q) });
+    res.page({ title: 'Person Index', active: 'people', body: SV.peopleIndex(u, people, q, req.session.csrf, show) });
+  }));
+
+  r.post('/people/kind', need('docket', 'allrecords', 'petitions'), checkCsrf, wrap(async (req, res) => {
+    const name = String((req.body || {}).name || '').slice(0, 140);
+    const kind = String((req.body || {}).kind || '');
+    try {
+      const set = People.setKind(name, kind);
+      req.session.flash = { text: set ? `${name} is set down as \u201c${set}\u201d.` : `${name} is left to the rolls to judge.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect(back(req, '/staff/people'));
   }));
 
   r.get('/people-suggest', need('docket', 'allrecords', 'petitions'), wrap(async (req, res) => {

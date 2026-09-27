@@ -587,3 +587,30 @@ table.rpt td{text-align:right;font-weight:600;padding:6px 0;border-bottom:1px so
 .chip.standing{border-color:var(--quill);color:var(--quill);background:rgba(58,74,110,.10)}
 .movebar{display:flex;gap:6px;align-items:center;margin:0}
 .movebar select{font-size:13.5px;padding:4px 6px;max-width:170px}
+
+/* ---- Ministry of Finance ---- */
+.monthbar{display:flex;gap:8px;align-items:center;margin:12px 0 18px}
+.monthbar .sel{font-family:var(--display);font-size:19px;padding:4px 10px}
+.numbox{display:flex;gap:14px;margin:18px 0;border:1px solid var(--gold-soft);background:rgba(246,237,214,.4);padding:18px 20px}
+.numbox .numstep{flex:0 0 30px;height:30px;border-radius:50%;background:var(--blood);color:#FFF6E6;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+.numbox .numbody{flex:1;min-width:0}
+.numbox h3{margin:2px 0 10px;font-family:var(--display);font-size:22px;color:var(--blood)}
+.drawbanner{display:flex;flex-wrap:wrap;gap:22px;justify-content:space-between;align-items:center;border:1px solid var(--blood);background:rgba(122,26,26,.07);padding:20px 24px;margin:18px 0}
+.drawbanner .bignum{font-family:var(--display);font-size:44px;line-height:1;color:var(--blood)}
+table.rpt.banner{width:auto;min-width:280px}
+table.rpt.banner th{text-transform:none;letter-spacing:0;font-size:14px;width:auto;padding-right:24px}
+.todo{border:1px solid var(--gold-soft);background:rgba(246,237,214,.5);padding:6px 18px;margin:14px 0}
+.todorow{display:flex;gap:16px;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(140,106,47,.18)}
+.todorow:last-child{border-bottom:none}
+.sharetable td,.sharetable th{padding:8px 10px}
+.sharetable .pctin{width:88px;text-align:right;padding:4px 6px;font-size:14px}
+tr.totalrow td{border-top:2px solid var(--gold);background:rgba(217,190,132,.18)}
+.rolewho{margin:6px 0 4px}
+.rolewho .dir-name{font-weight:600}
+.rolewho .dir-vacant{font-style:italic;color:var(--sepia);opacity:.75}
+.principle{display:flex;gap:18px;padding:18px 0;border-bottom:1px solid var(--gold-soft)}
+.principle .pnum{flex:0 0 46px;font-family:var(--display);font-size:26px;color:var(--gold);text-align:right}
+.principle h3{margin:0 0 6px;font-family:var(--display);font-size:22px;color:var(--ink)}
+.principle p{margin:0;line-height:1.7;color:var(--sepia);max-width:74ch}
+.dots{letter-spacing:.2em;color:var(--sepia)}
+.tone-mint{border-left-color:#3E8A5A}
