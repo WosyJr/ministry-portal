@@ -218,9 +218,32 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
 
   app.get('/finance/rosters', seeLedger, wrap(async (req, res) => {
     const gs = F.groups().filter(g => g.active !== false);
-    const groupId = gs.some(g => g.id === String(req.query.group || '')) ? String(req.query.group) : (gs[0] ? gs[0].id : '');
+    const asked = F.groupGet(String(req.query.group || ''));
+    const groupId = asked ? asked.id : (gs[0] ? gs[0].id : '');
     const withInactive = !!req.query.all;
-    page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive, F.musterFor(F.groupGet(groupId))));
+    rosterView(req, res, groupId, withInactive, gs);
+  }));
+
+  // The preview is rendered straight off the paste rather than carried in the
+  // session: a plan of any size would not fit in a cookie.
+  const rosterView = (req, res, groupId, withInactive, gs, preview, pasted) =>
+    page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive, F.musterFor(F.groupGet(groupId)), preview, pasted));
+
+  // Bringing a roster in from elsewhere. A paste is read over and shown back
+  // before anything is written down, because a bad paste is easier to stop
+  // than to unpick afterwards.
+  app.post('/finance/rosters/import', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
+    const b = req.body || {};
+    const groupId = String(b.groupId || '');
+    const commit = !!String(b.commit || '');
+    const gs = F.groups().filter(g => g.active !== false);
+    try {
+      const out = F.rosterImport(groupId, b.rows, req.user, commit);
+      if (!commit) return rosterView(req, res, groupId, false, gs, out, String(b.rows || '').slice(0, 40000));
+      const g = F.groupGet(groupId);
+      req.session.flash = { text: `${out.entered} entered upon the ${(g && g.name) || 'group'} roster, ${out.amended} amended${out.skipped.length ? `, ${out.skipped.length} line(s) passed over` : ''}.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/rosters?group=' + encodeURIComponent(groupId));
   }));
 
   app.post('/finance/rosters', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
