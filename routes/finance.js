@@ -220,7 +220,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     const gs = F.groups().filter(g => g.active !== false);
     const groupId = gs.some(g => g.id === String(req.query.group || '')) ? String(req.query.group) : (gs[0] ? gs[0].id : '');
     const withInactive = !!req.query.all;
-    page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive));
+    page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive, F.musterFor(F.groupGet(groupId))));
   }));
 
   app.post('/finance/rosters', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
@@ -492,6 +492,80 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       req.session.flash = { err: true, text: e.message };
       res.redirect('/finance/officers');
     }
+  }));
+
+  // ---- The summons roll ----
+  // Issuing, serving and referring are the Census & Excise Office's own work,
+  // so they sit behind the same permission as the assessments they arise from.
+
+  app.get('/finance/summons', seeLedger, wrap(async (req, res) => {
+    const q = String(req.query.q || '').trim().toLowerCase();
+    let list = F.summonses().slice().reverse();
+    if (q) list = list.filter(x => (x.who + ' ' + x.no + ' ' + x.assessNo + ' ' + (x.hold || '')).toLowerCase().includes(q));
+    page(res, req, 'The Summons Roll', FV.summonsPage(req.user, list, F.summonsTotals(), F.unchased(), req.session.csrf, census(req), { q: String(req.query.q || '') }));
+  }));
+
+  app.get('/finance/summons/:id/doc', seeLedger, wrap(async (req, res, next) => {
+    const x = F.summonsGet(String(req.params.id));
+    if (!x) return next();
+    res.type('html').send(FV.summonsDoc(x));
+  }));
+
+  app.post('/finance/summons', seeLedger, needTax, checkCsrf, wrap(async (req, res) => {
+    try { const x = F.summonsIssue(String((req.body || {}).assessId || ''), req.body || {}, req.user); req.session.flash = { text: `${x.no} goes out against ${x.who} over ${Number(x.sum).toLocaleString('en-US')}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect(back(req, '/finance/summons'));
+  }));
+
+  app.post('/finance/summons/:id/serve', seeLedger, needTax, checkCsrf, wrap(async (req, res) => {
+    try { const x = F.summonsServe(String(req.params.id), req.body || {}, req.user); req.session.flash = { text: `${x.no} is entered as served.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect(back(req, '/finance/summons'));
+  }));
+
+  app.post('/finance/summons/:id/answer', seeLedger, needTax, checkCsrf, wrap(async (req, res) => {
+    try { const x = F.summonsAnswer(String(req.params.id), req.body || {}, req.user); req.session.flash = { text: `The answer upon ${x.no} is set down.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect(back(req, '/finance/summons'));
+  }));
+
+  app.post('/finance/summons/:id/refer', seeLedger, needTax, checkCsrf, wrap(async (req, res) => {
+    try { const x = F.summonsRefer(String(req.params.id), req.body || {}, req.user); req.session.flash = { text: `${x.no} is referred to ${x.referredTo}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect(back(req, '/finance/summons'));
+  }));
+
+  app.post('/finance/summons/:id/close', seeLedger, needTax, checkCsrf, wrap(async (req, res) => {
+    try { const x = F.summonsClose(String(req.params.id), req.body || {}, req.user); req.session.flash = { text: `${x.no} is closed as ${String(x.status).toLowerCase()}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect(back(req, '/finance/summons'));
+  }));
+
+  app.post('/finance/summons/:id/remove', seeLedger, needTax, checkCsrf, wrap(async (req, res) => {
+    F.summonsRemove(String(req.params.id));
+    req.session.flash = { text: 'Struck from the roll.' };
+    res.redirect(back(req, '/finance/summons'));
+  }));
+
+  // ---- The Treasurer's report ----
+
+  const reportKeys = () => {
+    const ks = F.months().map(m => m.key).sort();
+    return ks.length ? ks : [F.monthKey()];
+  };
+  const askedSpan = req => {
+    const ok = k => /^\d{4}-\d{2}$/.test(k);
+    return F.reportSpan(ok(String(req.query.from || '')) ? String(req.query.from) : '', ok(String(req.query.to || '')) ? String(req.query.to) : '');
+  };
+
+  app.get('/finance/report', seeLedger, wrap(async (req, res) => {
+    const { from, to } = askedSpan(req);
+    page(res, req, 'The Treasurer\u2019s Report', FV.reportPage(req.user, F.report(from, to), req.session.csrf, reportKeys()));
+  }));
+
+  app.get('/finance/report/doc', seeLedger, wrap(async (req, res) => {
+    const { from, to } = askedSpan(req);
+    res.type('html').send(FV.reportDoc(F.report(from, to), req.user.name));
   }));
 
   const rankPatch = b => ({
