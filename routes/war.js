@@ -310,6 +310,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
       if (!warRankIds().has(String(b.rank))) throw new Error('That rank does not belong to the Imperial War Office.');
       if (!giveable(req.user).some(r => r.id === String(b.rank))) throw new Error('That rank carries powers you do not hold. You cannot appoint above yourself.');
       U.create({ username: b.username, name: b.name, office: b.office, rank: b.rank, holds: [], password: pw });
+      if (b.weekly !== undefined) U.update(b.username, { weekly: b.weekly });
       Activity.log(req.user, 'entered an officer of the War Office', '', `${b.name} (${(Ranks.get(b.rank) || {}).name || ''})`);
       return officersView(req, res, { username: String(b.username).trim().toLowerCase(), name: b.name, password: pw }, null);
     } catch (e) {
@@ -329,7 +330,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     const b = req.body || {};
     try {
       const t = guardWarOfficer(req.params.username);
-      const patch = { name: b.name, office: b.office, listed: !!b.listed };
+      const patch = { name: b.name, office: b.office, listed: !!b.listed, weekly: b.weekly };
       const want = String(b.rank || '');
       if (want && want !== t.rank) {
         if (!warRankIds().has(want)) throw new Error('That rank does not belong to the Imperial War Office.');

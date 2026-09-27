@@ -229,6 +229,22 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   const rosterView = (req, res, groupId, withInactive, gs, preview, pasted) =>
     page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive, F.musterFor(F.groupGet(groupId)), preview, pasted));
 
+  // Tying a group to the War Office muster, from the Rosters page itself.
+  // Posting with nothing ticked unties it and the roster goes back to hand.
+  app.post('/finance/groups/:id/muster', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
+    const g = F.groupGet(String(req.params.id));
+    if (!g) { req.session.flash = { err: true, text: 'No group answers to that.' }; return res.redirect('/finance/rosters'); }
+    const b = req.body || {};
+    try {
+      F.groupSave(g.id, { ...g, muster: [].concat(b.muster || []), musterPer: b.musterPer || g.musterPer, musterLeave: !!b.musterLeave });
+      const now = F.musterIds(F.groupGet(g.id));
+      req.session.flash = now.length
+        ? { text: `${g.name} now draws its wages off ${F.musterName(now)}.` }
+        : { text: `${g.name} keeps its roster by hand again.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/rosters?group=' + encodeURIComponent(g.id));
+  }));
+
   // Bringing a roster in from elsewhere. A paste is read over and shown back
   // before anything is written down, because a bad paste is easier to stop
   // than to unpick afterwards.
@@ -462,6 +478,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       if (!finRankIds().has(String(b.rank))) throw new Error('That rank does not belong to the Ministry of Finance.');
       if (!giveable(req.user).some(r => r.id === String(b.rank))) throw new Error('That rank carries powers you do not hold. You cannot appoint above yourself.');
       U.create({ username: b.username, name: b.name, office: b.office, rank: b.rank, holds: [], password: pw });
+      if (b.weekly !== undefined) U.update(b.username, { weekly: b.weekly });
       Activity.log(req.user, 'entered an officer of Finance', '', `${b.name} (${(Ranks.get(b.rank) || {}).name || ''})`);
       return officersView(req, res, { username: String(b.username).trim().toLowerCase(), name: b.name, password: pw }, null);
     } catch (e) {
@@ -481,7 +498,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     const b = req.body || {};
     try {
       const t = guardOfficer(req.params.username);
-      const patch = { name: b.name, office: b.office, listed: !!b.listed };
+      const patch = { name: b.name, office: b.office, listed: !!b.listed, weekly: b.weekly };
       const want = String(b.rank || '');
       if (want && want !== t.rank) {
         if (!finRankIds().has(want)) throw new Error('That rank does not belong to the Ministry of Finance.');

@@ -567,6 +567,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
       if (!jusRankIds().has(String(b.rank))) throw new Error('That rank does not belong to the Ministry of Justice.');
       if (!giveable(req.user).some(r => r.id === String(b.rank))) throw new Error('That rank carries powers you do not hold. You cannot appoint above yourself.');
       U.create({ username: b.username, name: b.name, office: b.office, rank: b.rank, holds: [], password: pw });
+      if (b.weekly !== undefined) U.update(b.username, { weekly: b.weekly });
       res.locals.issued = { username: String(b.username).trim().toLowerCase(), name: b.name, password: pw };
       Activity.log(req.user, 'entered an officer of Justice', '', `${b.name} (${(Ranks.get(b.rank) || {}).name || ''})`);
       const editing = null;
@@ -588,7 +589,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     const b = req.body || {};
     try {
       const t = guardOfficer(req, req.params.username);
-      const patch = { name: b.name, office: b.office, listed: !!b.listed };
+      const patch = { name: b.name, office: b.office, listed: !!b.listed, weekly: b.weekly };
       const want = String(b.rank || '');
       if (want && want !== t.rank) {
         if (!jusRankIds().has(want)) throw new Error('That rank does not belong to the Ministry of Justice.');

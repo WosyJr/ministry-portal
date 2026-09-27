@@ -34,6 +34,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     try {
       rankAllowed(req, req.body.rank);
       U.create({ username: req.body.username, name: req.body.name, office: req.body.office, rank: req.body.rank, holds: arr(req.body.holds), password: pw });
+      if (req.body.weekly !== undefined) U.update(req.body.username, { weekly: req.body.weekly });
       const un = String(req.body.username).trim().toLowerCase();
       res.locals.issued = { username: un, name: req.body.name, password: pw, fresh: true };
       Activity.log(req.user, 'entered an officer upon the rolls', '', `${req.body.name} (${(Ranks.get(req.body.rank) || {}).name || ''})`);
@@ -54,7 +55,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
       if (act === 'suspend') { if (who === req.user.username) throw new Error('You cannot suspend your own account.'); U.update(who, { active: false }); req.session.flash = { text: 'Suspended ' + t.name + '.' }; Activity.log(req.user, 'suspended an officer', '', t.name); }
       else if (act === 'restore') { U.update(who, { active: true }); req.session.flash = { text: 'Restored ' + t.name + '.' }; Activity.log(req.user, 'restored an officer', '', t.name); }
       else if (act === 'edit') {
-        const patch = { name: req.body.name, office: req.body.office, holds: arr(req.body.holds), listed: req.body.listed === '1' };
+        const patch = { name: req.body.name, office: req.body.office, holds: arr(req.body.holds), listed: req.body.listed === '1', weekly: req.body.weekly };
         if (req.body.rank && who !== req.user.username) { rankAllowed(req, req.body.rank); patch.rank = req.body.rank; }
         U.update(who, patch);
         req.session.flash = { text: 'Updated ' + t.name + '.' };
