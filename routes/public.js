@@ -5,6 +5,7 @@ const A = require('../lib/auth');
 const U = require('../lib/users');
 const G = require('../lib/google');
 const Ranks = require('../lib/ranks');
+const Tr = require('../lib/training');
 const Records = require('../lib/records');
 const Settings = require('../lib/settings');
 const Activity = require('../lib/activity');
@@ -41,6 +42,24 @@ module.exports = (app, { checkCsrf, wrap }) => {
     const im = Settings.ministerSeal() || Settings.ministryWax();
     res.set('Cache-Control', 'no-cache').type(im.type === 'jpg' ? 'image/jpeg' : 'image/png').send(im.data);
   });
+
+  // The Delegate's exercise. Open to anyone with the link, needs no login, and
+  // nothing filed upon it touches the Docket — it is not a record of the
+  // Ministry, it is somebody showing they can write one.
+  app.get('/exercise/dispatch', (req, res) => {
+    res.page({ title: 'The Delegate\u2019s Exercise', active: '', body: V.exerciseBox(req.session.csrf, null, res.locals.today) });
+  });
+
+  app.post('/exercise/dispatch', checkCsrf, wrap(async (req, res) => {
+    const b = req.body || {};
+    if (b.website) return res.redirect('/exercise/dispatch');
+    const again = (msg, status = 400) => res.page({ title: 'The Delegate\u2019s Exercise', active: '', flash: { err: true, text: msg }, body: V.exerciseBox(req.session.csrf, b, res.locals.today) }, status);
+    if (!A.rateLimit('exercise|' + req.ip, 5, 60 * 60 * 1000)) return again('That is enough from your hand for this hour. Return later.', 429);
+    try {
+      const x = Tr.add(b);
+      res.page({ title: 'Received', active: '', body: V.exerciseDone(x) });
+    } catch (e) { again(e.message); }
+  }));
 
   app.get('/petition', (req, res) => {
     res.page({ title: 'Petition Box', active: 'petition', body: V.petitionBox(req.session.csrf, null, G.connected() ? '' : 'The Ministry’s rolls are being prepared.', res.locals.today) });

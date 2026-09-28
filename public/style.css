@@ -659,3 +659,8 @@ tr.totalrow td{border-top:2px solid var(--line);background:rgba(246,237,214,.6)}
 .provnav{margin:0 0 18px}
 .topbar .who{font-family:var(--display);color:var(--blood);margin-right:10px}
 @media(max-width:620px){.provbar{flex-direction:column;align-items:flex-start}}
+.ruleset{list-style:none;margin:0 0 18px;padding:0}
+.ruleset li{padding:12px 0;border-bottom:1px solid var(--line)}
+.ruleset li:last-child{border-bottom:0}
+.ruleset li b{display:block;font-family:var(--display);font-weight:400;color:var(--blood);font-size:18px;margin-bottom:4px}
+.ruleset li span{display:block;color:var(--sepia);font-size:15px;line-height:1.6}

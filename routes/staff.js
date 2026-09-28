@@ -7,6 +7,7 @@ const U = require('../lib/users');
 const G = require('../lib/google');
 const S = require('../lib/store');
 const Ranks = require('../lib/ranks');
+const Tr = require('../lib/training');
 const Records = require('../lib/records');
 const Settings = require('../lib/settings');
 const Activity = require('../lib/activity');
@@ -686,7 +687,41 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   r.get('/training', need('training'), (req, res) => {
     const me = U.view(req.user.username);
     const scores = req.user.all || A.can(req.user, 'officers') ? U.list().filter(o => o.active && /Ministry|Office/.test((Ranks.get(o.rank) || {}).group || '')) : null;
-    res.page({ title: 'Training', active: 'training', body: SV.training(req.user, me && me.quiz, scores) });
+    res.page({ title: 'Training', active: 'training', body: SV.training(req.user, me && me.quiz, scores, Tr.counts()) });
+  });
+
+  r.get('/training/dispatch', need('training'), (req, res) =>
+    res.page({ title: 'How to Write a Dispatch', active: 'training', body: SV.dispatchGuide(req.user) }));
+
+  // The interview script and what comes back from the exercise are kept from
+  // anybody who cannot appoint: the questions are worth nothing once known.
+  const needJudge = (req, res, next) => Tr.mayJudge(req.user) ? next() : next('forbidden');
+
+  r.get('/training/interview', need('training'), needJudge, (req, res) =>
+    res.page({ title: 'Interviewing a Delegate', active: 'training', body: SV.interviewPage(req.user) }));
+
+  r.get('/training/exercises', need('training'), needJudge, (req, res) => {
+    const want = String(req.query.verdict || '');
+    const list = Tr.all().slice().reverse().filter(x => !want || x.verdict === want);
+    res.page({ title: 'Applicants’ Dispatches', active: 'training', body: SV.exercisesPage(req.user, list, req.session.csrf, Tr.VERDICTS.includes(want) ? want : '') });
+  });
+
+  r.get('/training/exercises/:id', need('training'), needJudge, (req, res) => {
+    const x = Tr.get(String(req.params.id));
+    if (!x) return res.say('No such exercise', 'Nothing answers to that.', 404);
+    res.page({ title: x.no, active: 'training', body: SV.exercisePage(req.user, x, req.session.csrf) });
+  });
+
+  r.post('/training/exercises/:id', need('training'), needJudge, checkCsrf, (req, res) => {
+    try { const x = Tr.mark(String(req.params.id), req.body || {}, req.user); req.session.flash = { text: `${x.no} is marked ${x.verdict.toLowerCase()}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/staff/training/exercises/' + encodeURIComponent(req.params.id));
+  });
+
+  r.post('/training/exercises/:id/remove', need('training'), needJudge, checkCsrf, (req, res) => {
+    Tr.remove(String(req.params.id));
+    req.session.flash = { text: 'Struck.' };
+    res.redirect('/staff/training/exercises');
   });
   r.get('/manual', need('training', 'clerk'), (req, res) => res.page({ title: 'Manuals', active: 'training', body: SV.manual(req.user) }));
   r.get('/quiz', need('training'), (req, res) => res.page({ title: 'Handbook Quiz', active: 'training', body: SV.quiz(QUIZ, req.session.csrf) }));
