@@ -229,6 +229,16 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   const rosterView = (req, res, groupId, withInactive, gs, preview, pasted) =>
     page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive, F.musterFor(F.groupGet(groupId)), preview, pasted));
 
+  // Making a group for a Ministry that keeps officers but has nobody paying it.
+  app.post('/finance/groups/for-roll', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
+    try {
+      const g = F.groupForRoll(String((req.body || {}).roll || ''));
+      req.session.flash = { text: `${g.name} is made a group and draws its wages off ${F.musterName(F.musterIds(g))}. Set its shares under Groups & Holds when you are ready.` };
+      return res.redirect('/finance/rosters?group=' + encodeURIComponent(g.id));
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect(back(req, '/finance/rosters'));
+  }));
+
   // Tying a group to the War Office muster, from the Rosters page itself.
   // Posting with nothing ticked unties it and the roster goes back to hand.
   app.post('/finance/groups/:id/muster', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {

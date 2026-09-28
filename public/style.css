@@ -638,3 +638,17 @@ tr.totalrow td{border-top:2px solid var(--gold);background:rgba(217,190,132,.18)
 .sumstrip .plainlist{margin:0 0 6px}
 .sumstrip .plainlist:last-child{margin-bottom:0}
 tr.totalrow td{border-top:2px solid var(--line);background:rgba(246,237,214,.6)}
+.peopletable{table-layout:fixed}
+.peopletable th:nth-child(1),.peopletable td:nth-child(1){width:15%}
+.peopletable th:nth-child(2),.peopletable td:nth-child(2){width:18%}
+.peopletable th:nth-child(3),.peopletable td:nth-child(3){width:10%}
+.peopletable th:nth-child(4),.peopletable td:nth-child(4){width:9%}
+.peopletable th:nth-child(5),.peopletable td:nth-child(5){width:16%}
+.peopletable td:nth-child(3),.peopletable td:nth-child(5){white-space:normal}
+.peopletable td .chip{display:inline-block;margin-bottom:3px}
+.peopletable td{vertical-align:top;word-break:normal;overflow-wrap:anywhere}
+.peopletable .inlinedit[open]{display:block}
+.peopletable .inlinedit .stack{margin-top:8px}
+.peopletable .inlinedit .hint{white-space:normal}
+.peopletable .actions-col{white-space:normal}
+.peopletable .actions-col .inline{display:inline-block}

@@ -17,8 +17,14 @@ module.exports = (app, { checkCsrf, wrap }) => {
   const r = express.Router();
   r.use(A.need('officers'));
 
+  // The Study is the Civil Affairs roll and nothing else. Officers of the other
+  // Ministries are kept by those Ministries; everyone at once is under
+  // /admin/people. Before each Ministry had its own door they all landed here,
+  // which is why people who never served Civil Affairs still appear on its roll.
+  const civilOnly = () => U.list().filter(u => Ranks.userBranch(u) === 'civil');
+
   function study(req, res, status, flash) {
-    res.page({ title: 'Minister’s Study', active: 'admin', flash, body: AV.study(U.list(), Ranks.all(), req.session.csrf, req.user, res.locals.issued) }, status);
+    res.page({ title: 'Minister’s Study', active: 'admin', flash, body: AV.study(civilOnly(), Ranks.all(), req.session.csrf, req.user, res.locals.issued) }, status);
   }
   const guard = (req, who) => {
     const target = U.view(who);
@@ -64,6 +70,67 @@ module.exports = (app, { checkCsrf, wrap }) => {
       else if (act === 'remove') { if (who === req.user.username) throw new Error('You cannot strike your own name from the rolls.'); U.remove(who); req.session.flash = { text: 'Removed ' + t.name + ' from the rolls.' }; Activity.log(req.user, 'removed an officer', '', t.name); }
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
     res.redirect('/admin');
+  });
+
+  // ---- Every login in the province ----
+  // Only the Minister opens this: it reaches across every Ministry's roll, so a
+  // scoped admin must not be able to move people into or out of their own.
+  const ministerOnly = A.requireAdmin;
+
+  function people(req, res, status, flash) {
+    res.page({
+      title: 'Every Login', active: 'admin', flash,
+      body: AV.peoplePage(U.list(), Ranks.all(), req.session.csrf, req.user, res.locals.issued,
+        { branch: Ranks.BRANCH_IDS.includes(String(req.query.branch || '')) ? String(req.query.branch) : '', q: String(req.query.q || '') })
+    }, status);
+  }
+
+  r.get('/people', ministerOnly, (req, res) => people(req, res));
+
+  r.post('/people', ministerOnly, checkCsrf, (req, res) => {
+    const pw = U.tempPassword();
+    try {
+      rankAllowed(req, req.body.rank);
+      U.create({ username: req.body.username, name: req.body.name, office: req.body.office, rank: req.body.rank, holds: [], password: pw });
+      const un = String(req.body.username).trim().toLowerCase();
+      res.locals.issued = { username: un, name: req.body.name, password: pw, fresh: true };
+      Activity.log(req.user, 'gave a login', '', `${req.body.name} (${(Ranks.get(req.body.rank) || {}).name || ''})`);
+      people(req, res);
+    } catch (e) { people(req, res, 400, { err: true, text: e.message }); }
+  });
+
+  r.post('/people/:username/:action', ministerOnly, checkCsrf, (req, res) => {
+    const who = req.params.username, act = req.params.action;
+    try {
+      const t = guard(req, who);
+      if (act === 'reset') {
+        const pw = U.tempPassword();
+        const u = U.update(who, { password: pw, mustChange: true });
+        res.locals.issued = { username: u.username, name: u.name, password: pw };
+        Activity.log(req.user, 'reset a password', '', u.name);
+        return people(req, res);
+      }
+      if (act === 'suspend') {
+        if (who === req.user.username) throw new Error('You cannot suspend your own account.');
+        U.update(who, { active: false });
+        req.session.flash = { text: 'Suspended ' + t.name + '.' };
+        Activity.log(req.user, 'suspended an officer', '', t.name);
+      } else if (act === 'restore') {
+        U.update(who, { active: true });
+        req.session.flash = { text: 'Restored ' + t.name + '.' };
+        Activity.log(req.user, 'restored an officer', '', t.name);
+      } else if (act === 'move') {
+        if (who === req.user.username) throw new Error('You cannot move your own account.');
+        rankAllowed(req, req.body.rank);
+        const was = Ranks.branchOf(Ranks.get(t.rank));
+        U.update(who, { rank: req.body.rank, office: req.body.office, weekly: req.body.weekly });
+        const now = Ranks.branchOf(Ranks.get(req.body.rank));
+        const name = id => (Ranks.BRANCHES.find(b => b.id === id) || {}).short || id;
+        req.session.flash = { text: was === now ? `${t.name} is amended.` : `${t.name} is moved from ${name(was)} to ${name(now)}.` };
+        Activity.log(req.user, 'moved an officer', '', `${t.name}: ${name(was)} → ${name(now)}`);
+      } else throw new Error('No such action.');
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/admin/people' + (req.body.back ? '' : ''));
   });
 
   const minister = A.requireAdmin;
