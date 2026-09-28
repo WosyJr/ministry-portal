@@ -39,6 +39,10 @@ module.exports = (app, { checkCsrf, wrap }) => {
     page(res, req, 'The Ministry of Justice', JV.hall(req.user, J.tallies(), holders));
   }));
 
+  app.get('/justice/standards', wrap(async (req, res) => {
+    page(res, req, 'The Inquisitors\u2019 Standards', JV.standardsPage(req.user));
+  }));
+
   app.get('/justice/principles', wrap(async (req, res) => {
     page(res, req, 'How Justice Is Done', JV.principles(req.user));
   }));
