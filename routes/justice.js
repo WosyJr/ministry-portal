@@ -292,11 +292,93 @@ module.exports = (app, { checkCsrf, wrap }) => {
     } catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
+  // Article 3. Modify, restrict, suspend or terminate are four different things,
+  // and the register says which was done rather than merely that it is off.
+  app.post('/justice/inquisitions/:id/commission/state', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const i = J.inqCommissionState(id, req.body || {}, req.user);
+      Activity.log(req.user, 'set the standing of a commission', i.commission.no, i.commission.state);
+      backInq(req, res, id, `${i.commission.no} stands as ${i.commission.state}.`);
+    } catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
   app.get('/justice/inquisitions/:id/commission/doc', seeCases, wrap(async (req, res, next) => {
     const i = J.inqGet(String(req.params.id));
     if (!i || !i.commission) return next();
     res.set('Content-Type', 'text/html; charset=utf-8');
     res.send(JV.commissionDoc(i));
+  }));
+
+  // Article 11. What the Hold was told, or the ground upon which it was not.
+  app.post('/justice/inquisitions/:id/notice', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try { J.inqNotice(id, req.body || {}, req.user); backInq(req, res, id, 'The notice is entered.'); }
+    catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  // Article 3. An extension of the subject matter, and the ground that carries it.
+  app.post('/justice/inquisitions/:id/extend', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const i = J.inqExtend(id, req.body || {}, req.user);
+      Activity.log(req.user, 'extended an inquisition', i.no);
+      backInq(req, res, id, 'The extension is set down. Report it to the Minister at the earliest opportunity.');
+    } catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  // Articles 19 and 20. What was done before authority could be had.
+  app.post('/justice/inquisitions/:id/emergency', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const i = J.inqEmergency(id, req.body || {}, req.user);
+      Activity.log(req.user, 'entered an emergency measure', i.no);
+      backInq(req, res, id, 'The measure is entered. It is temporary, and it is reported to the Minister as soon as may be.');
+    } catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  // Articles 21 to 23. The help of another authority is asked for, not ordered.
+  app.post('/justice/inquisitions/:id/assist', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try { J.inqAssist(id, req.body || {}, req.user); backInq(req, res, id, 'The request is set down.'); }
+    catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  // Article 25. Obstruction, once all three limbs are shown and not before.
+  app.post('/justice/inquisitions/:id/obstruction', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try { J.inqObstruction(id, req.body || {}, req.user); backInq(req, res, id, 'It is set down.'); }
+    catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  // Article 26. The report.
+  app.post('/justice/inquisitions/:id/report', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const i = J.inqReport(id, req.body || {}, req.user);
+      Activity.log(req.user, 'laid an inquisitorial report', i.no);
+      backInq(req, res, id, `The report upon ${i.no} is laid.`);
+    } catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  app.get('/justice/inquisitions/:id/report/doc', seeCases, wrap(async (req, res, next) => {
+    const i = J.inqGet(String(req.params.id));
+    if (!i || !i.report || typeof i.report !== 'object' || !i.report.facts) return next();
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(JV.inqReportDoc(i));
+  }));
+
+  // Article 27. The Minister's answer upon the report. It is the Minister's to
+  // give, not the Inquisitor's, so it is gated to those who may judge or to the
+  // Minister themselves rather than to whoever may open an inquisition.
+  app.post('/justice/inquisitions/:id/review', seeCases, checkCsrf, wrap(async (req, res, next) => {
+    if (!mayJudge(req.user) && !isAdmin(req.user)) return next('forbidden');
+    const id = String(req.params.id);
+    try {
+      const i = J.inqReview(id, req.body || {}, req.user);
+      Activity.log(req.user, 'answered upon an inquisitorial report', i.no, i.review.outcome);
+      backInq(req, res, id, `Set down: ${i.review.outcome}.`);
+    } catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
   app.post('/justice/inquisitions/:id/line', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
@@ -327,6 +409,58 @@ module.exports = (app, { checkCsrf, wrap }) => {
     const i = J.inqGet(String(req.params.id));
     if (i) { J.inqRemove(i.id); Activity.log(req.user, 'struck an inquisition', i.no); req.session.flash = { text: `${i.no} is struck entirely.` }; }
     res.redirect('/justice/inquisitions');
+  }));
+
+  // ---- Article 28: complaints against an Inquisitor ----
+  // The form is open to any person, named or not. The register is not: a
+  // half-examined complaint against a named officer is not public reading.
+
+  app.get('/justice/complaints/lay', wrap(async (req, res) => {
+    page(res, req, 'Complain of an Inquisitor', JV.complaintLayBox(req.user, req.session.csrf, null, ''));
+  }));
+
+  app.post('/justice/complaints/lay', checkCsrf, wrap(async (req, res) => {
+    const b = req.body || {};
+    if (b.website) return res.redirect('/justice/complaints/lay');
+    if (!A.rateLimit('juscomp|' + req.ip, 4, 60 * 60 * 1000)) {
+      return page(res, req, 'Complain of an Inquisitor', JV.complaintLayBox(req.user, req.session.csrf, b, 'The Ministry has had complaints enough from your hand this hour. Return later.'));
+    }
+    try {
+      const x = J.complaintLay(b, null);
+      Activity.log(null, 'laid a complaint against an Inquisitor', x.no);
+      page(res, req, x.no, JV.complaintLayDone(req.user, x));
+    } catch (e) {
+      page(res, req, 'Complain of an Inquisitor', JV.complaintLayBox(req.user, req.session.csrf, b, e.message));
+    }
+  }));
+
+  app.get('/justice/complaints', seeCases, needComplaints, wrap(async (req, res) => {
+    page(res, req, 'Complaints of Inquisitors', JV.complaintsPage(req.user, J.complaints().slice().reverse(), req.session.csrf, mayJudge(req.user) || isAdmin(req.user)));
+  }));
+
+  app.post('/justice/complaints', seeCases, needComplaints, checkCsrf, wrap(async (req, res) => {
+    try { const x = J.complaintLay(req.body || {}, req.user); req.session.flash = { text: `${x.no} is entered against ${x.against}, under the number ${x.code}.` }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/complaints');
+  }));
+
+  // Only the Minister, or an officer who may judge, answers upon a complaint:
+  // an Inquisitor does not examine a complaint against an Inquisitor.
+  app.post('/justice/complaints/:id', seeCases, checkCsrf, wrap(async (req, res, next) => {
+    if (!mayJudge(req.user) && !isAdmin(req.user)) return next('forbidden');
+    try {
+      const x = J.complaintUpdate(String(req.params.id), req.body || {}, req.user);
+      Activity.log(req.user, 'answered upon a complaint of an Inquisitor', x.no, x.status);
+      req.session.flash = { text: `${x.no} is set down as ${x.status}.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/complaints');
+  }));
+
+  app.post('/justice/complaints/:id/remove', seeCases, checkCsrf, wrap(async (req, res, next) => {
+    if (!mayJudge(req.user) && !isAdmin(req.user)) return next('forbidden');
+    J.complaintRemove(String(req.params.id));
+    req.session.flash = { text: 'Struck from the register of complaints.' };
+    res.redirect('/justice/complaints');
   }));
 
   app.get('/justice/parties', seeCases, wrap(async (req, res) => {

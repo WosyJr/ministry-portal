@@ -161,6 +161,10 @@ a.tal:hover{border-color:var(--blood)}
 .tal .tl{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--sepia)}
 .plainlist{list-style:none;margin:0;padding:0}
 .plainlist li{padding:7px 0;border-bottom:1px solid rgba(184,154,98,.45);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+/* An entry with several lines to it — a line of inquiry and what it rests upon,
+   a notice and the ground of it — reads as a paragraph, not a row of chips. */
+.plainlist li.lined{display:block}
+.plainlist li.lined .small{display:inline}
 .notif-list li.unread{background:rgba(107,20,20,.06);border-left:3px solid var(--blood);padding-left:8px;font-weight:600}
 .history li{display:block}
 .post,.reqcard{border:1px solid var(--line);background:rgba(246,237,214,.8);padding:14px 18px}
@@ -677,3 +681,37 @@ tr.totalrow td{border-top:2px solid var(--line);background:rgba(246,237,214,.6)}
   .meetgrid td{width:auto!important;padding:4px 0}
   .meetgrid td::before{content:attr(data-col);display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--sepia);margin-bottom:3px}
 }
+
+.landing-drift{position:fixed;inset:-12%;z-index:-1;pointer-events:none;opacity:.6;background:radial-gradient(38% 46% at 20% 26%,rgba(150,112,60,.14),transparent 70%),radial-gradient(44% 40% at 82% 22%,rgba(122,26,26,.07),transparent 72%),radial-gradient(54% 52% at 62% 86%,rgba(150,112,60,.11),transparent 74%),radial-gradient(40% 38% at 8% 78%,rgba(122,26,26,.05),transparent 72%);animation:mindrift 96s ease-in-out infinite alternate}
+@keyframes mindrift{from{transform:translate3d(-2.4%,-1.6%,0) scale(1.02)}to{transform:translate3d(2.6%,2%,0) scale(1.08)}}
+@keyframes minsettle{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@keyframes minrise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes mindraw{from{transform:scaleX(0);opacity:.2}to{transform:scaleX(1);opacity:1}}
+@keyframes minsheen{from{background-position:190% 0}to{background-position:-110% 0}}
+.landing-mast .eyebrow{animation:minsettle .55s .04s backwards ease-out}
+.landing-mast .admin{animation:minsettle .55s .12s backwards ease-out}
+.landing-title{animation:minsettle .7s .2s backwards cubic-bezier(.2,.7,.25,1)}
+.landing-lede{animation:minsettle .6s .36s backwards ease-out}
+.landing-mast .rule{transform-origin:center;animation:mindraw .8s .46s backwards cubic-bezier(.2,.7,.25,1)}
+.ministries .mincard{animation:minrise .62s backwards cubic-bezier(.2,.7,.25,1);animation-delay:calc(.52s + var(--i,0)*.1s)}
+.provbar{animation:minsettle .6s 1.04s backwards ease-out}
+.landing-foot{animation:minsettle .6s 1.16s backwards ease-out}
+.mincard{transition:transform .24s cubic-bezier(.2,.7,.25,1),box-shadow .24s ease,border-top-color .24s ease}
+.mincard::after{transition:border-color .24s ease,inset .24s cubic-bezier(.2,.7,.25,1)}
+.mincard:hover{transform:translateY(-6px);box-shadow:0 16px 34px rgba(90,65,40,.2)}
+.mincard:hover::after{inset:3px;border-color:rgba(178,146,92,.62)}
+.mincard:active{transform:translateY(-1px);box-shadow:0 3px 10px rgba(90,65,40,.2);transition-duration:.07s}
+.mincard-seal{position:relative}
+.mincard-seal .seal{transition:transform .28s cubic-bezier(.2,.7,.25,1),filter .28s ease}
+.mincard-seal::after{content:"";position:absolute;left:0;top:2px;width:86px;height:86px;border-radius:50%;pointer-events:none;background:linear-gradient(115deg,transparent 40%,rgba(255,246,222,.6) 50%,transparent 60%);background-size:280% 100%;background-position:190% 0;opacity:0}
+.mincard:hover .mincard-seal .seal{transform:translateY(-2px) scale(1.05);filter:drop-shadow(0 0 11px rgba(198,160,92,.5))}
+.mincard:hover .mincard-seal::after{opacity:1;animation:minsheen 1.05s ease-out}
+.mincard.shut:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(90,65,40,.12)}
+.mincard.shut:hover .mincard-seal .seal{transform:none;filter:none}
+.mincard.shut:hover .mincard-seal::after{opacity:0;animation:none}
+.mincard-go .arw{display:inline-block;transition:transform .24s cubic-bezier(.2,.7,.25,1)}
+.mincard:hover .mincard-go .arw{transform:translateX(7px)}
+.mincard-links a{transition:background .14s,border-color .14s,transform .14s}
+.mincard-links a:hover{transform:translateY(-1px)}
+@media (max-width:760px){.mincard-seal::after{left:50%;transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.landing-drift,.landing-mast .eyebrow,.landing-mast .admin,.landing-title,.landing-lede,.landing-mast .rule,.ministries .mincard,.provbar,.landing-foot,.mincard:hover .mincard-seal::after{animation:none!important;opacity:1!important;transform:none!important}}
