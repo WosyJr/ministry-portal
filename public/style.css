@@ -652,3 +652,10 @@ tr.totalrow td{border-top:2px solid var(--line);background:rgba(246,237,214,.6)}
 .peopletable .inlinedit .hint{white-space:normal}
 .peopletable .actions-col{white-space:normal}
 .peopletable .actions-col .inline{display:inline-block}
+.provbar{display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;margin:4px 0 26px;padding:20px 22px;background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--blood)}
+.provbar h2{font-family:var(--display);font-weight:400;color:var(--blood);font-size:23px;margin:4px 0 6px}
+.provbar p{margin:0;color:var(--sepia);font-size:15px;line-height:1.55;max-width:56ch}
+.provlinks{display:flex;flex-wrap:wrap;gap:8px}
+.provnav{margin:0 0 18px}
+.topbar .who{font-family:var(--display);color:var(--blood);margin-right:10px}
+@media(max-width:620px){.provbar{flex-direction:column;align-items:flex-start}}

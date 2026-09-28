@@ -168,7 +168,9 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
 
   r.get('/forms/:key', need('file'), (req, res) => {
     const f = formGuard(req, res); if (!f) return;
-    let prev = null, opts = { today: todayParts(), linked: String(req.query.link || '').slice(0, 300) };
+    // Coming from a Hold page, the Hold is already known; do not make them pick it again.
+    const asked = Ranks.HOLD_BY_ID[String(req.query.hold || '')];
+    let prev = null, opts = { today: todayParts(), linked: String(req.query.link || '').slice(0, 300), hold: asked ? asked.id : '' };
     if (req.query.draft) {
       const d = S.read('drafts.json', []).find(x => x.id === req.query.draft && x.by === req.user.username && x.form === f.key);
       if (d) { prev = d.body; opts = { ...opts, draftId: d.id, hold: d.body.hold || '', linked: d.body.linked || '', checks: d.body.check || {} }; }
@@ -503,7 +505,8 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       d.petitions = here.filter(x => x.Class === 'Petition' && !Records.isClosed(x));
       d.dispatches = here.filter(x => x.Form === 'dispatch').slice(0, 10);
       d.notices = here.filter(x => x.Form === 'notice').slice(0, 10);
-      d.open = here.filter(x => Records.needsHand(x) && x.Class !== 'Petition' && x.Form !== 'dispatch' && x.Form !== 'notice');
+      d.open = here.filter(x => Records.needsHand(x) && x.Class !== 'Petition' && x.Form !== 'dispatch' && x.Form !== 'notice' && x.Form !== Records.COURT_FORM);
+      d.court = Records.courtFor(here, h.name);
     }
     res.page({ title: h.name, active: 'holds', body: SV.holdPage(h, d, req.user) });
   }));

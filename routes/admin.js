@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const AV = require('../lib/adminviews');
+const V = require('../lib/views');
 const A = require('../lib/auth');
 const U = require('../lib/users');
 const G = require('../lib/google');
@@ -16,6 +17,27 @@ const clean = (s, max) => String(s ?? '').replace(/\r/g, '').trim().slice(0, max
 module.exports = (app, { checkCsrf, wrap }) => {
   const r = express.Router();
   r.use(A.need('officers'));
+
+  // Reached from the front of the portal, not from inside a Ministry.
+  const provinceBody = (req, res, issued, flash) => res.send(V.provincePage({
+    today: res.locals.today, user: req.user, active: 'logins',
+    body: `<main>${flash ? `<div class="flash${flash.err ? ' err' : ''}">${flash.text}</div>` : ''}${AV.peoplePage(
+      U.list(), Ranks.all(), req.session.csrf, req.user, issued,
+      { branch: Ranks.BRANCH_IDS.includes(String(req.query.branch || '')) ? String(req.query.branch) : '', q: String(req.query.q || '') },
+      true
+    )}</main>`
+  }));
+
+  const provinceGate = (req, res, next) => {
+    if (!req.user) { req.session.returnTo = req.originalUrl; return res.redirect('/login'); }
+    if (!req.user.all) return next('forbidden');
+    next();
+  };
+
+  app.get('/province', provinceGate, (req, res) => {
+    const flash = req.session.flash; req.session.flash = null;
+    provinceBody(req, res, null, flash);
+  });
 
   // The Study is the Civil Affairs roll and nothing else. Officers of the other
   // Ministries are kept by those Ministries; everyone at once is under
@@ -77,15 +99,10 @@ module.exports = (app, { checkCsrf, wrap }) => {
   // scoped admin must not be able to move people into or out of their own.
   const ministerOnly = A.requireAdmin;
 
-  function people(req, res, status, flash) {
-    res.page({
-      title: 'Every Login', active: 'admin', flash,
-      body: AV.peoplePage(U.list(), Ranks.all(), req.session.csrf, req.user, res.locals.issued,
-        { branch: Ranks.BRANCH_IDS.includes(String(req.query.branch || '')) ? String(req.query.branch) : '', q: String(req.query.q || '') })
-    }, status);
-  }
-
-  r.get('/people', ministerOnly, (req, res) => people(req, res));
+  r.get('/people', ministerOnly, (req, res) => {
+    const q = req.originalUrl.split('?')[1];
+    res.redirect('/province' + (q ? '?' + q : ''));
+  });
 
   r.post('/people', ministerOnly, checkCsrf, (req, res) => {
     const pw = U.tempPassword();
@@ -93,10 +110,9 @@ module.exports = (app, { checkCsrf, wrap }) => {
       rankAllowed(req, req.body.rank);
       U.create({ username: req.body.username, name: req.body.name, office: req.body.office, rank: req.body.rank, holds: [], password: pw });
       const un = String(req.body.username).trim().toLowerCase();
-      res.locals.issued = { username: un, name: req.body.name, password: pw, fresh: true };
       Activity.log(req.user, 'gave a login', '', `${req.body.name} (${(Ranks.get(req.body.rank) || {}).name || ''})`);
-      people(req, res);
-    } catch (e) { people(req, res, 400, { err: true, text: e.message }); }
+      return provinceBody(req, res, { username: un, name: req.body.name, password: pw, fresh: true }, null);
+    } catch (e) { return provinceBody(req, res, null, { err: true, text: e.message }); }
   });
 
   r.post('/people/:username/:action', ministerOnly, checkCsrf, (req, res) => {
@@ -106,9 +122,8 @@ module.exports = (app, { checkCsrf, wrap }) => {
       if (act === 'reset') {
         const pw = U.tempPassword();
         const u = U.update(who, { password: pw, mustChange: true });
-        res.locals.issued = { username: u.username, name: u.name, password: pw };
         Activity.log(req.user, 'reset a password', '', u.name);
-        return people(req, res);
+        return provinceBody(req, res, { username: u.username, name: u.name, password: pw }, null);
       }
       if (act === 'suspend') {
         if (who === req.user.username) throw new Error('You cannot suspend your own account.');
@@ -130,7 +145,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
         Activity.log(req.user, 'moved an officer', '', `${t.name}: ${name(was)} → ${name(now)}`);
       } else throw new Error('No such action.');
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
-    res.redirect('/admin/people' + (req.body.back ? '' : ''));
+    res.redirect('/province');
   });
 
   const minister = A.requireAdmin;
