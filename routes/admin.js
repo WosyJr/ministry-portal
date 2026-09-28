@@ -222,6 +222,13 @@ module.exports = (app, { checkCsrf, wrap }) => {
     req.session.flash = { text: 'The calendar is set. Today reads ' + Settings.today().text + '.' };
     res.redirect('/admin/settings');
   });
+  r.post('/settings/landing', minister, checkCsrf, (req, res) => {
+    const want = Settings.LANDINGS.includes(req.body.landing) ? req.body.landing : 'cards';
+    Settings.set({ landing: want });
+    Activity.log(req.user, 'set the front page', want);
+    req.session.flash = { text: want === 'books' ? 'The front page now sets out the Ministries as books. Set it back to cards here whenever you like.' : 'The front page is back to cards.' };
+    res.redirect('/admin/settings');
+  });
   r.post('/settings/retention', minister, checkCsrf, (req, res) => {
     Settings.set({ retentionDays: Math.min(3650, Math.max(0, parseInt(req.body.days, 10) || 0)) });
     req.session.flash = { text: 'The retention period is set.' };

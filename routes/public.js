@@ -23,7 +23,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   }
   const notices = rows => (rows || []).filter(r => r.Public === 'Yes' && r.Form !== 'directive' && !['Awaiting Seal', 'Returned'].includes(r.Status)).reverse();
 
-  app.get('/', (req, res) => res.send(V.landingPage(res.locals.today, req.user)));
+  app.get('/', (req, res) => res.send(V.landingPage(res.locals.today, req.user, Settings.landing())));
 
   app.get('/hall', wrap(async (req, res) => {
     res.page({ title: 'The Hall', active: 'home', body: V.publicHome(notices(await publicRows()), res.locals.today) });
