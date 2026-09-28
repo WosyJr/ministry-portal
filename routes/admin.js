@@ -39,6 +39,31 @@ module.exports = (app, { checkCsrf, wrap }) => {
     provinceBody(req, res, null, flash);
   });
 
+  // The other three sections of the Study belong to the province, not to Civil
+  // Affairs, so they are served in the same shell and the old paths lead here.
+  const inProvince = (req, res, active, inner) => {
+    const flash = req.session.flash; req.session.flash = null;
+    res.send(V.provincePage({
+      today: res.locals.today, user: req.user, active,
+      body: `<main>${flash ? `<div class="flash${flash.err ? ' err' : ''}">${flash.text}</div>` : ''}${inner}</main>`
+    }));
+  };
+
+  app.get('/province/ranks', provinceGate, (req, res) =>
+    inProvince(req, res, 'ranks', AV.ranksPage(Ranks.all(), counts(), req.session.csrf, req.user, true)));
+
+  app.get('/province/settings', provinceGate, (req, res) =>
+    inProvince(req, res, 'settings', AV.settingsPage(Settings.get(), G.status(), Settings.laws(), req.session.csrf, req.user, res.locals.today, true, { url: res.locals.site, fixed: C.BASE_URL_SET })));
+
+  app.get('/province/forms', provinceGate, (req, res) =>
+    inProvince(req, res, 'forms', AV.formsPage(Forms.listCustom(), C.FOLDER_NAMES, Forms.DEPTS, req.session.csrf, req.user, null, true)));
+
+  app.get('/province/forms/:id/edit', provinceGate, (req, res) => {
+    const entry = Forms.listCustom().find(x => x.id === req.params.id);
+    if (!entry) return res.redirect('/province/forms');
+    inProvince(req, res, 'forms', AV.formsPage(Forms.listCustom(), C.FOLDER_NAMES, Forms.DEPTS, req.session.csrf, req.user, entry, true));
+  });
+
   // The Study is the Civil Affairs roll and nothing else. Officers of the other
   // Ministries are kept by those Ministries; everyone at once is under
   // /admin/people. Before each Ministry had its own door they all landed here,
@@ -150,7 +175,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
 
   const minister = A.requireAdmin;
   const counts = () => U.list().reduce((m, u) => { m[u.rank] = (m[u.rank] || 0) + 1; return m; }, {});
-  r.get('/ranks', minister, (req, res) => res.page({ title: 'Ranks & Access', active: 'admin', body: AV.ranksPage(Ranks.all(), counts(), req.session.csrf, req.user) }));
+  r.get('/ranks', minister, (req, res) => res.redirect('/province/ranks'));
   r.post('/ranks', minister, checkCsrf, (req, res) => {
     try {
       const copy = Ranks.get(req.body.copy);
@@ -177,7 +202,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/admin/ranks');
   });
 
-  r.get('/settings', minister, (req, res) => res.page({ title: 'Seal, Calendar & Laws', active: 'admin', body: AV.settingsPage(Settings.get(), G.status(), Settings.laws(), req.session.csrf, req.user, res.locals.today) }));
+  r.get('/settings', minister, (req, res) => res.redirect('/province/settings'));
   r.post('/settings/seal', minister, checkCsrf, (req, res) => {
     try {
       if (req.body.clear === '1') { Settings.clearMinisterSeal(); req.session.flash = { text: 'Writs you seal now carry the Ministry’s wax seal.' }; }
@@ -242,7 +267,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   function formsPage(req, res, status, editing) {
     res.page({ title: 'Writ Templates', active: 'admin', body: AV.formsPage(Forms.listCustom(), C.FOLDER_NAMES, Forms.DEPTS, req.session.csrf, req.user, editing) }, status);
   }
-  r.get('/forms', minister, (req, res) => formsPage(req, res));
+  r.get('/forms', minister, (req, res) => res.redirect('/province/forms'));
   r.get('/forms/:id/edit', minister, (req, res) => {
     const entry = Forms.listCustom().find(x => x.id === req.params.id);
     if (!entry) { req.session.flash = { err: true, text: 'No such writ template.' }; return res.redirect('/admin/forms'); }

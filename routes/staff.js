@@ -318,7 +318,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     const linked = Records.links(rec).map(no => ({ no, row: rows.find(x => x['Record No'] === no && Records.canSee(req.user, x)) }));
     const id = Records.docId(rec);
     if (!Activity.loggedRecently(req.user.username, 'viewed', rec['Record No'], 10 * 60 * 1000)) Activity.log(req.user, 'viewed', rec['Record No']);
-    res.page({ title: rec['Record No'], active: 'docket', body: SV.recordPage(rec, { u: req.user, csrf: req.session.csrf, officers: U.list(), linked, history: Activity.recent({ target: rec['Record No'], limit: 40 }), docSrc: id ? `/staff/files/${encodeURIComponent(id)}/content` : '', m: Records.meta(rec), countersigns: Counter.forRecord(rec['Record No']), baseUrl: C.BASE_URL || '' }) });
+    res.page({ title: rec['Record No'], active: 'docket', body: SV.recordPage(rec, { u: req.user, csrf: req.session.csrf, officers: U.list(), linked, history: Activity.recent({ target: rec['Record No'], limit: 40 }), docSrc: id ? `/staff/files/${encodeURIComponent(id)}/content` : '', m: Records.meta(rec), countersigns: Counter.forRecord(rec['Record No']), baseUrl: res.locals.site || '' }) });
   }));
 
   const recPost = (perm, fn) => [perm ? need(perm) : (req, res, next) => next(), checkCsrf, wrap(async (req, res) => {

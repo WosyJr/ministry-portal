@@ -42,6 +42,10 @@ app.use((req, res, next) => {
   req.user = req.session.username ? U.sessionUser(req.session.username) : null;
   if (req.session.username && !req.user) req.session.username = null;
   res.locals.today = Settings.today();
+  // What the portal calls itself when it must print its own address. The
+  // configured BASE_URL wins; otherwise the request says where we are, which is
+  // the custom domain once Railway and Cloudflare are pointed at it.
+  res.locals.site = C.BASE_URL || (req.protocol + '://' + req.get('host'));
   res.page = async (opts, status) => {
     const flash = req.session.flash; req.session.flash = null;
     const b = await badges(req.user);

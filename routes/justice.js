@@ -269,6 +269,32 @@ module.exports = (app, { checkCsrf, wrap }) => {
     catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
+  // The commission is the Minister's own writ, so only those who may open an
+  // inquisition may issue one, and the paper itself is readable by any officer
+  // who may see the inquisition it belongs to.
+  app.post('/justice/inquisitions/:id/commission', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const i = J.inqCommission(id, req.body || {}, req.user);
+      backInq(req, res, id, `${i.commission.no} is issued to ${i.commission.inquisitors}.`);
+    } catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  app.post('/justice/inquisitions/:id/commission/revoke', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const i = J.inqCommissionRevoke(id, req.body || {}, req.user);
+      backInq(req, res, id, i.commission.revoked ? `${i.commission.no} is revoked and carries no authority.` : `${i.commission.no} stands again.`);
+    } catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  app.get('/justice/inquisitions/:id/commission/doc', seeCases, wrap(async (req, res, next) => {
+    const i = J.inqGet(String(req.params.id));
+    if (!i || !i.commission) return next();
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(JV.commissionDoc(i));
+  }));
+
   app.post('/justice/inquisitions/:id/line', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
     const id = String(req.params.id);
     try { J.inqLineAdd(id, req.body || {}); backInq(req, res, id, 'The line of inquiry is set down.'); }
