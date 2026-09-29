@@ -23,7 +23,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   }
   const notices = rows => (rows || []).filter(r => r.Public === 'Yes' && r.Form !== 'directive' && !['Awaiting Seal', 'Returned'].includes(r.Status)).reverse();
 
-  app.get('/', (req, res) => res.send(V.landingPage(res.locals.today, req.user, Settings.landing())));
+  app.get('/', (req, res) => res.send(V.landingPage(res.locals.today, req.user, Settings.landing(), Settings.pageGround())));
 
   // The province's own clock, so the date on the page can turn over while
   // somebody is still looking at it.

@@ -44,7 +44,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   const inProvince = (req, res, active, inner) => {
     const flash = req.session.flash; req.session.flash = null;
     res.send(V.provincePage({
-      today: res.locals.today, user: req.user, active,
+      today: res.locals.today, user: req.user, active, ground: Settings.pageGround(),
       body: `<main>${flash ? `<div class="flash${flash.err ? ' err' : ''}">${flash.text}</div>` : ''}${inner}</main>`
     }));
   };
@@ -54,6 +54,9 @@ module.exports = (app, { checkCsrf, wrap }) => {
 
   app.get('/province/settings', provinceGate, (req, res) =>
     inProvince(req, res, 'settings', AV.settingsPage(Settings.get(), G.status(), Settings.laws(), req.session.csrf, req.user, res.locals.today, true, { url: res.locals.site, fixed: C.BASE_URL_SET })));
+
+  app.get('/province/motion', provinceGate, (req, res) =>
+    inProvince(req, res, 'motion', AV.motionPage(Settings.get(), res.locals.today, V.seasonOf(res.locals.today))));
 
   app.get('/province/forms', provinceGate, (req, res) =>
     inProvince(req, res, 'forms', AV.formsPage(Forms.listCustom(), C.FOLDER_NAMES, Forms.DEPTS, req.session.csrf, req.user, null, true)));
@@ -225,7 +228,8 @@ module.exports = (app, { checkCsrf, wrap }) => {
   r.post('/settings/landing', minister, checkCsrf, (req, res) => {
     const want = Settings.LANDINGS.includes(req.body.landing) ? req.body.landing : 'cards';
     const grd = Settings.GROUNDS.includes(req.body.pageGround) ? req.body.pageGround : 'lamplit';
-    Settings.set({ landing: want, pageGround: grd });
+    const cur = Settings.CURSORS.includes(req.body.cursor) ? req.body.cursor : 'standard';
+    Settings.set({ landing: want, pageGround: grd, cursor: cur });
     Activity.log(req.user, 'set the front page', want + ' on ' + grd);
     req.session.flash = { text: (want === 'books' ? 'The front page now sets out the Ministries as books.' : 'The front page is back to cards.') + ' The halls stand on ' + (grd === 'lamplit' ? 'the lamplit ground' : 'plain parchment') + '. Both are set back from here.' };
     res.redirect('/admin/settings');

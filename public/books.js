@@ -8,19 +8,8 @@
     if (c) c.setAttribute('aria-expanded', 'false');
     bk.querySelectorAll('.bleaf a').forEach(function (a) { a.setAttribute('tabindex', '-1'); });
   }
-  // The cover swings toward whichever side has room inside the case, so a book
-  // at the left edge opens rightward instead of hanging out over the page.
-  function side(bk) {
-    var face = bk.querySelector('.bookface');
-    var cab = bk.closest('.cabinet');
-    if (!face || !cab) return;
-    var f = face.getBoundingClientRect(), c = cab.getBoundingClientRect();
-    bk.classList.toggle('open-right', (f.left - c.left) < f.width + 14);
-  }
-
   function open(bk) {
     books.forEach(function (o) { if (o !== bk) shut(o); });
-    side(bk);
     bk.classList.add('open');
     var c = bk.querySelector('.bcover');
     if (c) c.setAttribute('aria-expanded', 'true');
@@ -36,11 +25,6 @@
     cover.addEventListener('click', function () {
       if (bk.classList.contains('open')) shut(bk); else open(bk);
     });
-  });
-
-  window.addEventListener('resize', function () {
-    var o = document.querySelector('.minbook.open');
-    if (o) side(o);
   });
 
   document.addEventListener('keydown', function (e) {

@@ -636,7 +636,7 @@
     });
 
     var tb = doc.querySelector('.ledger tbody');
-    if (!tb || tb.rows.length < 12) return;
+    if (!tb || tb.rows.length < 8) return;
     var rows = [].slice.call(tb.rows);
     var mark = null;
     try { mark = localStorage.getItem(KEY); } catch (_) {}

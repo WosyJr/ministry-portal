@@ -716,7 +716,7 @@ tr.totalrow td{border-top:2px solid var(--line);background:rgba(246,237,214,.6)}
 @media (max-width:760px){.mincard-seal::after{left:50%;transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){.landing-drift,.landing-mast .eyebrow,.landing-mast .admin,.landing-title,.landing-lede,.landing-mast .rule,.ministries .mincard,.provbar,.landing-foot,.mincard:hover .mincard-seal::after{animation:none!important;opacity:1!important;transform:none!important}}
 
-.cabinet{position:relative;margin:34px 0 26px;padding:30px 26px 34px;
+.cabinet{position:relative;margin:34px 0 26px;padding:30px 26px 34px 40px;
   background:linear-gradient(176deg,#4A2E14,#39230F 40%,#2B1A09),
     repeating-linear-gradient(92deg,rgba(18,10,3,.28) 0 2px,transparent 2px 11px);
   border:1px solid #231506;border-radius:3px;
@@ -768,10 +768,6 @@ tr.totalrow td{border-top:2px solid var(--line);background:rgba(246,237,214,.6)}
 .bcover:focus-visible{outline:2px solid #EBD9A8;outline-offset:3px}
 .minbook.open .bookface{filter:none;transform:translateY(-22px) scale(1.07)}
 .minbook.open .bcover,.minbook.open .bookface:hover .bcover{transform:rotateY(-162deg)}
-.minbook.open-right .bcover{transform-origin:right center}
-.minbook.open-right.open .bcover,.minbook.open-right.open .bookface:hover .bcover{transform:rotateY(162deg)}
-.minbook.open-right .bspine{left:auto;right:-5px;border-radius:0 3px 3px 0;background:linear-gradient(270deg,#380A0A,#6B1414)}
-.minbook.open-right .bleaf{box-shadow:inset -9px 0 12px -9px rgba(90,65,40,.55)}
 .bunder{display:flex;flex-direction:column;gap:6px;min-width:0}
 .bunder .eyebrow{font-size:10.5px}
 .minbook.shut .bfront{background:linear-gradient(150deg,#6A5730,#4E3F21 58%,#3C3019);border-color:#332814}
@@ -1271,10 +1267,10 @@ body.ground-desk::before,body.ground-roads::before{content:none}
   .presswax,.flashwax,.presscard,.pressno span,.presslede{animation:none!important;opacity:1!important;transform:none!important;filter:none!important}
 }
 
-#lamp{position:fixed;inset:-14%;z-index:-2;pointer-events:none;
-  background:radial-gradient(46% 34% at var(--lx,50%) var(--ly,8%),rgba(255,236,196,.5),transparent 66%);
+#lamp{position:fixed;inset:-14%;z-index:41;pointer-events:none;mix-blend-mode:soft-light;
+  background:radial-gradient(44% 32% at var(--lx,50%) var(--ly,8%),rgba(255,232,186,.85),rgba(255,226,168,.3) 46%,transparent 70%);
   animation:lampswing 24s ease-in-out infinite alternate;
-  transition:background-position .9s cubic-bezier(.22,.8,.3,1)}
+  transition:background .9s cubic-bezier(.22,.8,.3,1),opacity .7s ease}
 body.ground-desk #lamp,body.ground-roads #lamp{display:none}
 
 #weather{position:fixed;inset:0;z-index:44;pointer-events:none}
@@ -1322,20 +1318,27 @@ body.gutter #lamp{opacity:.32;transition:opacity .16s ease}
 #ribbon-mark{position:fixed;right:0;z-index:46;display:flex;align-items:center;gap:7px;border:0;cursor:pointer;
   font-family:var(--display);font-size:13px;color:#F6EDD6;background:linear-gradient(180deg,#8A1E1E,#6B1414);
   padding:7px 12px 8px 14px;border-radius:3px 0 0 3px;box-shadow:-3px 3px 12px rgba(50,20,10,.4);
-  transform:translateX(calc(100% - 26px));transition:transform .28s cubic-bezier(.3,.8,.3,1)}
+  transform:translateX(calc(100% - 52px));transition:transform .28s cubic-bezier(.3,.8,.3,1)}
 #ribbon-mark:hover,#ribbon-mark:focus-visible{transform:translateX(0)}
 #ribbon-mark::before{content:"";width:8px;height:20px;flex:0 0 auto;background:#D9BE84;
   clip-path:polygon(0 0,100% 0,100% 100%,50% 74%,0 100%)}
 
-.dryquill{filter:saturate(calc(1 - var(--dry,0) * .34)) brightness(calc(1 - var(--dry,0) * .14));
-  transition:filter .5s ease}
+.dryquill{position:relative;overflow:hidden;
+  filter:saturate(calc(1 - var(--dry,0) * .62)) brightness(calc(1 - var(--dry,0) * .2));
+  transition:filter .6s ease}
+.dryquill::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--gold-soft);
+  transform-origin:left;transform:scaleX(calc(1 - var(--dry,0)));transition:transform .6s ease;opacity:.85}
 .dryquill.reinked{animation:reink .7s ease-out}
 @keyframes reink{0%{filter:saturate(1.2) brightness(1.1)}100%{filter:none}}
 
-tr.thumbed > *,.recprev.thumbed,.reqcard.thumbed{background-image:
-  radial-gradient(60% 120% at 96% 50%,rgba(150,112,60,.13),transparent 62%)}
-tr.thumbed > *:first-child{position:relative}
-tr.thumbed > *:first-child::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:rgba(150,112,60,.45)}
+.ledger tbody tr.thumbed > th,.ledger tbody tr.thumbed > td,
+.ledger tbody tr:nth-child(even).thumbed > th,.ledger tbody tr:nth-child(even).thumbed > td,
+.recprev.thumbed,.reqcard.thumbed{
+  background-color:rgba(150,112,60,.13);
+  background-image:radial-gradient(70% 140% at 98% 50%,rgba(150,112,60,.2),transparent 58%)}
+.ledger tbody tr.thumbed > *:first-child{position:relative;box-shadow:inset 3px 0 0 0 rgba(150,112,60,.75)}
+.ledger tbody tr.thumbed > *:last-child::after{content:"read";float:right;margin-left:8px;font-size:9.5px;
+  letter-spacing:.14em;text-transform:uppercase;color:rgba(140,106,47,.8)}
 
 @media (prefers-reduced-motion:reduce){
   #frost,#breath,#hearth{display:none}
@@ -1344,3 +1347,32 @@ tr.thumbed > *:first-child::after{content:"";position:absolute;left:0;top:0;bott
   .dryquill{filter:none!important}
   #ribbon-mark{transition:none;transform:translateX(0)}
 }
+
+body.quillhand,body.quillhand .scroll,body.quillhand .card,body.quillhand .panel{
+  cursor:url("/cursor-quill.png") 2 2,default}
+body.quillhand a,body.quillhand button,body.quillhand summary,body.quillhand label,
+body.quillhand [role=button],body.quillhand .act,body.quillhand .bcover,body.quillhand .leaf,
+body.quillhand .seat,body.quillhand .plaque,body.quillhand .ledger th[data-sortable],
+body.quillhand input[type=checkbox],body.quillhand input[type=radio],body.quillhand select{
+  cursor:url("/cursor-quill-ink.png") 2 2,pointer}
+body.quillhand input[type=text],body.quillhand input[type=search],body.quillhand input[type=password],
+body.quillhand input[type=number],body.quillhand input[type=email],body.quillhand input[type=date],
+body.quillhand textarea{cursor:text}
+body.quillhand [disabled],body.quillhand .minbook.shut .bcover{cursor:not-allowed}
+@media (prefers-reduced-motion:reduce){
+  body.quillhand,body.quillhand *{cursor:auto}
+  body.quillhand a,body.quillhand button,body.quillhand summary,body.quillhand [role=button]{cursor:pointer}
+}
+@media (hover:none){body.quillhand,body.quillhand *{cursor:auto}}
+
+/* A short page used to stop where its content stopped, leaving the lighter
+   ground of the document showing beneath it. */
+body{min-height:100vh}
+html:has(body.lamplit){background:#DCC9A0}
+html:has(body.ground-desk){background:#1F1409}
+html:has(body.ground-roads){background:var(--parch)}
+
+.motionrow h3{margin:2px 0 4px}
+.motionrow .hint{margin:0}
+#demo-flash{margin:10px 0 0}
+#demo-stamp{margin:10px 0 0}
