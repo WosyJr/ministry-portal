@@ -228,8 +228,8 @@ module.exports = (app, { checkCsrf, wrap }) => {
   r.post('/settings/landing', minister, checkCsrf, (req, res) => {
     const want = Settings.LANDINGS.includes(req.body.landing) ? req.body.landing : 'cards';
     const grd = Settings.GROUNDS.includes(req.body.pageGround) ? req.body.pageGround : 'lamplit';
-    const cur = Settings.CURSORS.includes(req.body.cursor) ? req.body.cursor : 'standard';
-    Settings.set({ landing: want, pageGround: grd, cursor: cur });
+    const cur = Settings.CURSORS.includes(req.body.cursor) ? req.body.cursor : 'quill';
+    Settings.set({ landing: want, pageGround: grd, cursor: cur, cursorChosen: true });
     Activity.log(req.user, 'set the front page', want + ' on ' + grd);
     req.session.flash = { text: (want === 'books' ? 'The front page now sets out the Ministries as books.' : 'The front page is back to cards.') + ' The halls stand on ' + (grd === 'lamplit' ? 'the lamplit ground' : 'plain parchment') + '. Both are set back from here.' };
     res.redirect('/admin/settings');

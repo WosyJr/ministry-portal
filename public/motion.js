@@ -328,17 +328,6 @@
   }
 
 
-  // No two sheets alike: the grain sits at a slightly different angle each load.
-  try {
-    var R = document.documentElement.style;
-    R.setProperty('--grain', (60 + Math.floor(Math.random() * 90)) + 'deg');
-    R.setProperty('--grain2', (Math.floor(Math.random() * 90) - 30) + 'deg');
-    R.setProperty('--grain3', (Math.floor(Math.random() * 120)) + 'deg');
-    R.setProperty('--grainC', (13 + Math.floor(Math.random() * 12)) + 'px');
-    R.setProperty('--grainA', (5 + Math.floor(Math.random() * 8)) + 'px');
-    R.setProperty('--grainB', (8 + Math.floor(Math.random() * 11)) + 'px');
-  } catch (_) {}
-
   // The candle gutters when you look away and catches again when you come back.
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) { doc.body.classList.add('away'); doc.body.classList.remove('relit'); return; }
@@ -392,10 +381,10 @@
     lamp.id = 'lamp';
     lamp.setAttribute('aria-hidden', 'true');
     doc.body.appendChild(lamp);
-    var lroot = doc.documentElement.style, lpend = false, lx = 50, ly = 8;
+    var lroot = doc.documentElement.style, lpend = false, lx = 50, ly = 26;
     window.addEventListener('pointermove', function (e) {
-      lx = 50 + ((e.clientX / innerWidth) - 0.5) * 26;
-      ly = 8 + ((e.clientY / innerHeight) - 0.5) * 16;
+      lx = (e.clientX / innerWidth) * 100;
+      ly = (e.clientY / innerHeight) * 100;
       if (lpend) return;
       lpend = true;
       requestAnimationFrame(function () {
