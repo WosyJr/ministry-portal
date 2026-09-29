@@ -374,25 +374,11 @@
     if (row) row.classList.add('tearing');
   }, true);
 
-  // The lamp over the whole portal: it swings on its chain, and it leans a
-  // little toward whoever is at the page.
   if (doc.body.classList.contains('lamplit') && !still) {
     var lamp = el('div');
     lamp.id = 'lamp';
     lamp.setAttribute('aria-hidden', 'true');
     doc.body.appendChild(lamp);
-    var lroot = doc.documentElement.style, lpend = false, lx = 50, ly = 26;
-    window.addEventListener('pointermove', function (e) {
-      lx = (e.clientX / innerWidth) * 100;
-      ly = (e.clientY / innerHeight) * 100;
-      if (lpend) return;
-      lpend = true;
-      requestAnimationFrame(function () {
-        lpend = false;
-        lroot.setProperty('--lx', lx.toFixed(1) + '%');
-        lroot.setProperty('--ly', ly.toFixed(1) + '%');
-      });
-    }, { passive: true });
   }
 
   // The date turns over when the province's day actually changes, not merely
@@ -524,6 +510,7 @@
     var br = el('div');
     br.id = 'breath';
     br.setAttribute('aria-hidden', 'true');
+    br.innerHTML = '<i class="fog"></i><i class="mottle"></i><i class="runs"></i>';
     doc.body.appendChild(br);
     var puff = function () {
       if (!doc.hidden) {

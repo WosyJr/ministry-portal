@@ -1299,19 +1299,46 @@ body.ground-desk #lamp,body.ground-roads #lamp{display:none}
 #frost .bl{bottom:0;left:0;transform:scaleY(-1)}
 #frost .br{bottom:0;right:0;transform:scale(-1,-1)}
 
-#breath{position:fixed;inset:0;z-index:42;pointer-events:none;opacity:0;
-  background:radial-gradient(circle at 50% 50%,
-    rgba(246,252,255,.86),
-    rgba(242,250,255,.62) 26%,
-    rgba(238,248,255,.34) 48%,
-    rgba(234,246,255,.12) 70%,
-    transparent 86%)}
-#breath.on{animation:breathe 6.4s ease-in-out}
-@keyframes breathe{
-  0%{opacity:0;transform:scale(.24)}
-  16%{opacity:1;transform:scale(.52)}
-  46%{opacity:.86;transform:scale(1)}
-  100%{opacity:0;transform:scale(1.5)}}
+#breath{position:fixed;inset:0;z-index:42;pointer-events:none;opacity:0;overflow:hidden}
+#breath i{position:absolute;inset:-10%;display:block;transform-origin:50% 50%}
+#breath .fog{
+  background:
+    radial-gradient(circle at 50% 50%,rgba(250,254,255,.90),rgba(244,251,255,.66) 22%,rgba(236,247,255,.34) 44%,rgba(228,242,255,.10) 68%,transparent 84%);
+  filter:blur(2px)}
+#breath .mottle{
+  background:
+    radial-gradient(circle at 41% 44%,rgba(255,255,255,.34),transparent 26%),
+    radial-gradient(circle at 58% 52%,rgba(255,255,255,.28),transparent 22%),
+    radial-gradient(circle at 47% 61%,rgba(255,255,255,.22),transparent 19%),
+    radial-gradient(circle at 62% 39%,rgba(255,255,255,.18),transparent 17%),
+    radial-gradient(circle at 36% 57%,rgba(255,255,255,.16),transparent 15%);
+  filter:blur(5px);mix-blend-mode:screen}
+#breath .runs{
+  background:
+    linear-gradient(177deg,transparent 34%,rgba(255,255,255,.22) 36%,transparent 39%),
+    linear-gradient(183deg,transparent 48%,rgba(255,255,255,.16) 50%,transparent 53%);
+  filter:blur(3px);opacity:0}
+#breath.on{animation:breathhold 7.2s ease-out}
+#breath.on .fog{animation:breathbloom 7.2s cubic-bezier(.16,.72,.3,1)}
+#breath.on .mottle{animation:breathmottle 7.2s ease-out}
+#breath.on .runs{animation:breathruns 7.2s ease-in}
+@keyframes breathhold{0%{opacity:0}7%{opacity:1}62%{opacity:1}100%{opacity:0}}
+@keyframes breathbloom{
+  0%{transform:scale(.10);filter:blur(7px)}
+  12%{transform:scale(.38);filter:blur(4px)}
+  38%{transform:scale(.88);filter:blur(2px)}
+  62%{transform:scale(1.04);filter:blur(2px)}
+  100%{transform:scale(1.34);filter:blur(9px)}}
+@keyframes breathmottle{
+  0%{transform:scale(.14) rotate(-3deg);opacity:0}
+  16%{opacity:.9}
+  56%{transform:scale(1) rotate(1deg);opacity:.7}
+  100%{transform:scale(1.4) rotate(4deg);opacity:0}}
+@keyframes breathruns{
+  0%,34%{opacity:0;transform:translateY(-3%)}
+  58%{opacity:.85;transform:translateY(0)}
+  100%{opacity:0;transform:translateY(5%)}}
+@media (prefers-reduced-motion:reduce){#breath{display:none}}
 
 body.gutter #lamp{opacity:.06;transition:opacity .1s ease}
 body.gutter #hearth{opacity:.3;transition:opacity .1s ease}
@@ -1370,22 +1397,32 @@ body.gutter #hearth{opacity:.3;transition:opacity .1s ease}
   #ribbon-mark{transition:none;transform:translateX(0)}
 }
 
-body.quillhand,body.quillhand .scroll,body.quillhand .card,body.quillhand .panel{
-  cursor:url("/cursor-quill.png") 2 2,default}
-body.quillhand a,body.quillhand button,body.quillhand summary,body.quillhand label,
-body.quillhand [role=button],body.quillhand .act,body.quillhand .bcover,body.quillhand .leaf,
-body.quillhand .seat,body.quillhand .plaque,body.quillhand .ledger th[data-sortable],
-body.quillhand input[type=checkbox],body.quillhand input[type=radio],body.quillhand select{
-  cursor:url("/cursor-quill-ink.png") 2 2,pointer}
-body.quillhand input[type=text],body.quillhand input[type=search],body.quillhand input[type=password],
-body.quillhand input[type=number],body.quillhand input[type=email],body.quillhand input[type=date],
-body.quillhand textarea{cursor:text}
-body.quillhand [disabled],body.quillhand .minbook.shut .bcover{cursor:not-allowed}
+body.drawnhand,body.drawnhand .scroll,body.drawnhand .card,body.drawnhand .panel{
+  cursor:var(--cur-rest),default}
+body.drawnhand a,body.drawnhand button,body.drawnhand summary,body.drawnhand label,
+body.drawnhand [role=button],body.drawnhand .act,body.drawnhand .bcover,body.drawnhand .leaf,
+body.drawnhand .seat,body.drawnhand .plaque,body.drawnhand .ledger th[data-sortable],
+body.drawnhand .minbook,body.drawnhand .bookface,body.drawnhand .mincard-links a,
+body.drawnhand input[type=checkbox],body.drawnhand input[type=radio],body.drawnhand select{
+  cursor:var(--cur-press),pointer}
+body.drawnhand input[type=text],body.drawnhand input[type=search],body.drawnhand input[type=password],
+body.drawnhand input[type=number],body.drawnhand input[type=email],body.drawnhand input[type=date],
+body.drawnhand textarea{cursor:text}
+body.drawnhand [disabled],body.drawnhand .minbook.shut .bcover{cursor:not-allowed}
+
+body.hand-quill{--cur-rest:url("/cursor-quill.png") 2 2;--cur-press:url("/cursor-quill-ink.png") 2 2}
+body.hand-signet{--cur-rest:url("/cursor-signet.png") 2 2;--cur-press:url("/cursor-signet-press.png") 2 2}
+body.hand-sword{--cur-rest:url("/cursor-sword.png") 2 2;--cur-press:url("/cursor-sword-press.png") 2 2}
+body.hand-key{--cur-rest:url("/cursor-key.png") 4 4;--cur-press:url("/cursor-key-press.png") 4 4}
+body.hand-candle{--cur-rest:url("/cursor-candle.png") 2 2;--cur-press:url("/cursor-candle-press.png") 2 2}
+body.hand-writ{--cur-rest:url("/cursor-writ.png") 2 2;--cur-press:url("/cursor-writ-press.png") 2 2}
+body.hand-arrow{--cur-rest:url("/cursor-arrow.png") 2 2;--cur-press:url("/cursor-arrow-press.png") 2 2}
+
 @media (prefers-reduced-motion:reduce){
-  body.quillhand,body.quillhand *{cursor:auto}
-  body.quillhand a,body.quillhand button,body.quillhand summary,body.quillhand [role=button]{cursor:pointer}
+  body.drawnhand,body.drawnhand *{cursor:auto}
+  body.drawnhand a,body.drawnhand button,body.drawnhand summary,body.drawnhand [role=button]{cursor:pointer}
 }
-@media (hover:none){body.quillhand,body.quillhand *{cursor:auto}}
+@media (hover:none){body.drawnhand,body.drawnhand *{cursor:auto}}
 
 /* A short page used to stop where its content stopped, leaving the lighter
    ground of the document showing beneath it. */
@@ -1470,3 +1507,12 @@ body.lamplit.ground-roads .wrap > main,body.lamplit.ground-roads .wrap > header.
   backdrop-filter:blur(1px)}
 body.lamplit.ground-desk .wrap > main,body.lamplit.ground-desk .wrap > header.mast{
   background:none;box-shadow:none;padding:0;border-radius:0}
+
+.handrow{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 4px}
+.handswatch{margin:0;display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:9px 12px 7px;border:1px solid var(--line);border-radius:3px;background:var(--paper)}
+.handswatch.on{border-color:var(--blood);box-shadow:0 0 0 1px var(--blood) inset}
+.handswatch span{display:flex;gap:6px;align-items:center}
+.handswatch img{image-rendering:auto;display:block}
+.handswatch figcaption{font-family:var(--display);font-size:13px;color:var(--sepia);letter-spacing:.3px}
+.demostamp{display:inline-block;font-size:15px}
