@@ -331,10 +331,12 @@
   // No two sheets alike: the grain sits at a slightly different angle each load.
   try {
     var R = document.documentElement.style;
-    R.setProperty('--grain', (86 + Math.floor(Math.random() * 40)) + 'deg');
-    R.setProperty('--grain2', (Math.floor(Math.random() * 40) - 8) + 'deg');
-    R.setProperty('--grainA', (6 + Math.floor(Math.random() * 4)) + 'px');
-    R.setProperty('--grainB', (9 + Math.floor(Math.random() * 5)) + 'px');
+    R.setProperty('--grain', (60 + Math.floor(Math.random() * 90)) + 'deg');
+    R.setProperty('--grain2', (Math.floor(Math.random() * 90) - 30) + 'deg');
+    R.setProperty('--grain3', (Math.floor(Math.random() * 120)) + 'deg');
+    R.setProperty('--grainC', (13 + Math.floor(Math.random() * 12)) + 'px');
+    R.setProperty('--grainA', (5 + Math.floor(Math.random() * 8)) + 'px');
+    R.setProperty('--grainB', (8 + Math.floor(Math.random() * 11)) + 'px');
   } catch (_) {}
 
   // The candle gutters when you look away and catches again when you come back.
@@ -469,8 +471,8 @@
     var gust = 1, gustTo = 1, gustT = 0;
     function wind() {
       gustT -= 1;
-      if (gustT <= 0) { gustTo = 0.35 + Math.random() * Math.random() * 2.3; gustT = 900 + Math.random() * 2400; }
-      gust += (gustTo - gust) * 0.0016;
+      if (gustT <= 0) { gustTo = 0.25 + Math.random() * Math.random() * 4.2; gustT = 520 + Math.random() * 1500; }
+      gust += (gustTo - gust) * 0.004;
     }
 
     function draw() {
@@ -607,7 +609,7 @@
     var ink = function () {
       var n = 0;
       fields.forEach(function (x) { n += String(x.value || '').length; });
-      go.style.setProperty('--dry', Math.min(1, n / 900).toFixed(3));
+      go.style.setProperty('--dry', Math.min(.92, n / 320).toFixed(3));
     };
     f.addEventListener('input', ink);
     f.addEventListener('submit', function () {
@@ -625,14 +627,18 @@
     function load(k) { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (_) { return []; } }
     function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v.slice(-400))); } catch (_) {} }
 
+    // What counts as "read" is the whole address, query and all. Comparing only
+    // the path marked every row on a page as read the moment you opened the page.
+    var here = location.pathname + location.search;
     var seen = load(SEEN);
-    if (seen.indexOf(location.pathname) < 0) { seen.push(location.pathname); save(SEEN, seen); }
+    if (seen.indexOf(here) < 0) { seen.push(here); save(SEEN, seen); }
 
     doc.querySelectorAll('.ledger tbody tr, .recprev, .reqcard').forEach(function (row) {
       var a = row.querySelector('a[href]');
       if (!a) return;
       var href = a.getAttribute('href');
-      if (href && seen.indexOf(href.split('?')[0]) >= 0) row.classList.add('thumbed');
+      if (!href || href === here) return;
+      if (seen.indexOf(href) >= 0) row.classList.add('thumbed');
     });
 
     var tb = doc.querySelector('.ledger tbody');
@@ -663,6 +669,32 @@
     place();
     window.addEventListener('scroll', place, { passive: true });
     window.addEventListener('resize', place);
+  })();
+
+
+  // Searching the rolls: names, ranks and rolls, with empty groups folded away.
+  (function () {
+    var box = doc.getElementById('peoplefind');
+    var tbl = doc.getElementById('peopletable');
+    if (!box || !tbl) return;
+    var count = doc.getElementById('peoplecount');
+    var rows = [].slice.call(tbl.querySelectorAll('tr[data-find]'));
+    var groups = [].slice.call(tbl.querySelectorAll('tbody.rollgroup'));
+    var run = function () {
+      var q = box.value.trim().toLowerCase();
+      var n = 0;
+      rows.forEach(function (r) {
+        var hit = !q || r.dataset.find.indexOf(q) >= 0;
+        r.hidden = !hit;
+        if (hit) n += 1;
+      });
+      groups.forEach(function (gp) {
+        gp.hidden = !gp.querySelector('tr[data-find]:not([hidden])');
+      });
+      if (count) count.textContent = q ? (n + ' of ' + rows.length + ' upon the rolls') : (rows.length + ' upon the rolls');
+    };
+    box.addEventListener('input', run);
+    box.addEventListener('search', run);
   })();
 
 })();
