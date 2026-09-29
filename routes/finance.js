@@ -9,12 +9,21 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   const page = (res, req, title, body) => res.page({ title, active: 'finance', body, branch: 'finance' });
 
   const seeLedger = A.need('findesk', 'finledger');
+  // Someone given nothing but 'finask' may lay a request for money and see the
+  // Requests page. Every other page of Finance stays shut to them.
+  const mayAsk = u => !!u && (u.all || Ranks.can(u, 'finask'));
+  const seeRequests = (req, res, next) => {
+    if (mayAsk(req.user)) return next();
+    return seeLedger(req, res, next);
+  };
+  const askOnly = u => mayAsk(u) && !(u.all || Ranks.can(u, 'findesk') || Ranks.can(u, 'finledger'));
   const mayManage = u => !!u && (u.all || Ranks.can(u, 'finpay') || Ranks.can(u, 'finrevenue'));
   const mayPay = u => !!u && (u.all || Ranks.can(u, 'finpay'));
   const mayAudit = u => !!u && (u.all || Ranks.can(u, 'finaudit'));
   const isAdmin = u => Ranks.mayAdminBranch(u, 'finance');
 
   const needManage = (req, res, next) => mayManage(req.user) ? next() : next('forbidden');
+  const needAsk = (req, res, next) => (mayManage(req.user) || mayAsk(req.user)) ? next() : next('forbidden');
   const needPay = (req, res, next) => mayPay(req.user) ? next() : next('forbidden');
   const needAdmin = (req, res, next) => {
     if (!req.user) { req.session.returnTo = req.originalUrl; return res.redirect('/finance/entrance'); }
@@ -34,7 +43,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     const m = String(req.query.month || req.params.key || '');
     return /^\d{4}-\d{2}$/.test(m) ? m : F.monthKey();
   };
-  const may = req => ({ manage: mayManage(req.user), pay: mayPay(req.user), answer: mayPay(req.user), audit: mayAudit(req.user), ask: mayManage(req.user), log: mayManage(req.user) });
+  const may = req => ({ manage: mayManage(req.user), pay: mayPay(req.user), answer: mayPay(req.user), audit: mayAudit(req.user), ask: mayManage(req.user) || mayAsk(req.user), log: mayManage(req.user), askOnly: askOnly(req.user) });
 
   // ---- Public ----
 
@@ -165,12 +174,16 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
 
   // ---- Requests ----
 
-  app.get('/finance/requests', seeLedger, wrap(async (req, res) => {
+  app.get('/finance/requests', seeRequests, wrap(async (req, res) => {
     const show = ['waiting', 'approved', 'done'].includes(String(req.query.show || '')) ? String(req.query.show) : 'waiting';
-    page(res, req, 'Requests', FV.requestsPage(req.user, F.requests().slice().reverse(), show, req.session.csrf, may(req), F.groups().filter(g => g.active !== false)));
+    const m = may(req);
+    // One who may only ask sees the requests they laid themselves, and no others.
+    const all = F.requests().slice().reverse();
+    const mine = m.askOnly ? all.filter(r => r.byUser ? r.byUser === req.user.username : r.by === req.user.name) : all;
+    page(res, req, 'Requests', FV.requestsPage(req.user, mine, show, req.session.csrf, m, F.groups().filter(g => g.active !== false)));
   }));
 
-  app.post('/finance/requests', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
+  app.post('/finance/requests', seeRequests, needAsk, checkCsrf, wrap(async (req, res) => {
     try { const r = F.requestAsk(req.body || {}, req.user); req.session.flash = { text: `${r.no} is laid before the Treasury.` }; }
     catch (e) { req.session.flash = { err: true, text: e.message }; }
     res.redirect('/finance/requests');
@@ -230,7 +243,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     try {
       const w = F.wagePay(req.body || {}, req.user);
       Activity.log(req.user, 'paid wages', w.name, String(w.amount));
-      req.session.flash = { text: `${w.name} is paid ${w.amount} septims.`, seal: true };
+      req.session.flash = { text: `${w.name} is paid ${w.amount} septims.`, seal: true, coins: Math.max(1, Math.min(12, Math.round(Math.log10(Math.max(10, Number(w.amount) || 10)) * 3))) };
       to += '?name=' + encodeURIComponent(w.name);
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
     res.redirect(to);
@@ -241,7 +254,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       const made = F.wagePayRoll(String((req.body || {}).groupId || ''), req.body || {}, req.user);
       const sum = made.reduce((n, w) => n + Number(w.amount || 0), 0);
       Activity.log(req.user, 'paid a whole roll', (F.groupGet(String(req.body.groupId)) || {}).name || '', String(sum));
-      req.session.flash = { text: `${made.length} paid, ${sum} septims in all.`, seal: true };
+      req.session.flash = { text: `${made.length} paid, ${sum} septims in all.`, seal: true, coins: Math.max(1, Math.min(12, made.length)) };
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
     res.redirect('/finance/people');
   }));

@@ -21,7 +21,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   // Reached from the front of the portal, not from inside a Ministry.
   const provinceBody = (req, res, issued, flash) => res.send(V.provincePage({
     today: res.locals.today, user: req.user, active: 'logins',
-    ground: Settings.pageGround(), cursor: Settings.cursor(),
+    ground: Settings.pageGround(), cursor: Settings.cursor(), csrf: req.session.csrf,
     body: `<main>${flash ? `<div class="flash${flash.err ? ' err' : ''}">${flash.text}</div>` : ''}${AV.peoplePage(
       U.list(), Ranks.all(), req.session.csrf, req.user, issued,
       { branch: Ranks.BRANCH_IDS.includes(String(req.query.branch || '')) ? String(req.query.branch) : '', q: String(req.query.q || '') },
@@ -45,7 +45,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   const inProvince = (req, res, active, inner) => {
     const flash = req.session.flash; req.session.flash = null;
     res.send(V.provincePage({
-      today: res.locals.today, user: req.user, active, ground: Settings.pageGround(), cursor: Settings.cursor(),
+      today: res.locals.today, user: req.user, active, ground: Settings.pageGround(), cursor: Settings.cursor(), csrf: req.session.csrf,
       body: `<main>${flash ? `<div class="flash${flash.err ? ' err' : ''}">${flash.text}</div>` : ''}${inner}</main>`
     }));
   };

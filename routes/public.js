@@ -23,7 +23,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   }
   const notices = rows => (rows || []).filter(r => r.Public === 'Yes' && r.Form !== 'directive' && !['Awaiting Seal', 'Returned'].includes(r.Status)).reverse();
 
-  app.get('/', (req, res) => res.send(V.landingPage(res.locals.today, req.user, Settings.landing(), Settings.pageGround(), Settings.cursor())));
+  app.get('/', (req, res) => res.send(V.landingPage(res.locals.today, req.user, Settings.landing(), Settings.pageGround(), Settings.cursor(), req.session.csrf)));
 
   // The province's own clock, so the date on the page can turn over while
   // somebody is still looking at it.
@@ -272,6 +272,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     const to = req.session.returnTo || String(req.body.to || ''); req.session.returnTo = null;
     req.session.csrf = crypto.randomBytes(18).toString('hex');
     req.session.username = user.username;
+    req.session.entered = true;
     Activity.log(user, 'entered the hall');
     if (user.mustChange) return res.redirect('/account/password');
     res.redirect(to && to.startsWith('/') && !to.startsWith('//') ? to : A.homeFor(U.sessionUser(user.username)));
