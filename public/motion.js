@@ -374,13 +374,6 @@
     if (row) row.classList.add('tearing');
   }, true);
 
-  if (doc.body.classList.contains('lamplit') && !still) {
-    var lamp = el('div');
-    lamp.id = 'lamp';
-    lamp.setAttribute('aria-hidden', 'true');
-    doc.body.appendChild(lamp);
-  }
-
   // The date turns over when the province's day actually changes, not merely
   // the next time somebody happens to load a page.
   (function () {
