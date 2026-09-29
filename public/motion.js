@@ -8,10 +8,11 @@
     bar.className = 'navglide';
     row.appendChild(bar);
     var home = row.querySelector('a.on') || null;
+    window.addEventListener('resize', function () { move(row.querySelector('a:hover') || home, !!home); });
     function move(a, show) {
       if (!a) { bar.style.opacity = '0'; return; }
       bar.style.width = a.offsetWidth + 'px';
-      bar.style.transform = 'translateX(' + a.offsetLeft + 'px)';
+      bar.style.transform = 'translate(' + a.offsetLeft + 'px,' + (a.offsetTop + a.offsetHeight - 3) + 'px)';
       bar.style.opacity = show ? '1' : '0';
     }
     links.forEach(function (a) {

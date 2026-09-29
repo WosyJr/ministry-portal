@@ -494,7 +494,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   }
   r.get('/holds', need('holds'), wrap(async (req, res) => {
     const rows = await Records.visible(req.user);
-    res.page({ title: 'Holds', active: 'holds', body: SV.holds(holdCounts(rows), U.list()) });
+    res.page({ title: 'Holds', active: 'holds', ground: 'roads', body: SV.holds(holdCounts(rows), U.list()) });
   }));
   r.get('/holds/:id', need('holds'), wrap(async (req, res) => {
     const h = Ranks.HOLD_BY_ID[req.params.id];
