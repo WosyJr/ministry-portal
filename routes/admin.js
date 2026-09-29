@@ -224,9 +224,10 @@ module.exports = (app, { checkCsrf, wrap }) => {
   });
   r.post('/settings/landing', minister, checkCsrf, (req, res) => {
     const want = Settings.LANDINGS.includes(req.body.landing) ? req.body.landing : 'cards';
-    Settings.set({ landing: want });
-    Activity.log(req.user, 'set the front page', want);
-    req.session.flash = { text: want === 'books' ? 'The front page now sets out the Ministries as books. Set it back to cards here whenever you like.' : 'The front page is back to cards.' };
+    const grd = Settings.GROUNDS.includes(req.body.pageGround) ? req.body.pageGround : 'lamplit';
+    Settings.set({ landing: want, pageGround: grd });
+    Activity.log(req.user, 'set the front page', want + ' on ' + grd);
+    req.session.flash = { text: (want === 'books' ? 'The front page now sets out the Ministries as books.' : 'The front page is back to cards.') + ' The halls stand on ' + (grd === 'lamplit' ? 'the lamplit ground' : 'plain parchment') + '. Both are set back from here.' };
     res.redirect('/admin/settings');
   });
   r.post('/settings/retention', minister, checkCsrf, (req, res) => {

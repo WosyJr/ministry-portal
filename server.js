@@ -51,7 +51,7 @@ app.use((req, res, next) => {
     const b = await badges(req.user);
     // opts is spread first so an explicit flash that is undefined cannot wipe
     // the one waiting in the session after a redirect.
-    res.status(status || 200).send(V.layout({ ...opts, user: req.user, csrf: req.session.csrf, flash: opts.flash || flash, today: res.locals.today, badges: b }));
+    res.status(status || 200).send(V.layout({ ...opts, user: req.user, csrf: req.session.csrf, flash: opts.flash || flash, today: res.locals.today, badges: b, siteGround: Settings.pageGround() }));
   };
   res.say = (title, text, status) => res.page({ title, body: V.message(title, text) }, status);
   next();

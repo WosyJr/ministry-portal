@@ -211,7 +211,8 @@ module.exports = (app, { checkCsrf, wrap }) => {
     try {
       const c = J.judgmentGive(id, { ...(req.body || {}), cites: [].concat((req.body || {}).cites || []), published: !!(req.body || {}).published }, req.user);
       Activity.log(req.user, 'gave judgment', c.no, c.judgment.finding);
-      back(req, res, id, `Judgment given upon ${c.no}.`);
+      req.session.flash = { text: `Judgment given upon ${c.no}.`, gavel: true };
+      return res.redirect('/justice/cases/' + encodeURIComponent(id));
     } catch (e) { back(req, res, id, '', e.message); }
   }));
 

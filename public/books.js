@@ -1,15 +1,61 @@
 (function () {
   var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (still) return;
-  document.querySelectorAll('.bookface[data-book]').forEach(function (a) {
-    a.addEventListener('click', function (e) {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-      var bk = a.closest('.minbook');
-      if (!bk || bk.classList.contains('opening')) return;
-      e.preventDefault();
-      bk.classList.add('opening');
-      setTimeout(function () { window.location.href = a.getAttribute('href'); }, 520);
+  var books = [].slice.call(document.querySelectorAll('.minbook'));
+
+  function shut(bk) {
+    bk.classList.remove('open');
+    var c = bk.querySelector('.bcover');
+    if (c) c.setAttribute('aria-expanded', 'false');
+    bk.querySelectorAll('.bleaf a').forEach(function (a) { a.setAttribute('tabindex', '-1'); });
+  }
+  // The cover swings toward whichever side has room inside the case, so a book
+  // at the left edge opens rightward instead of hanging out over the page.
+  function side(bk) {
+    var face = bk.querySelector('.bookface');
+    var cab = bk.closest('.cabinet');
+    if (!face || !cab) return;
+    var f = face.getBoundingClientRect(), c = cab.getBoundingClientRect();
+    bk.classList.toggle('open-right', (f.left - c.left) < f.width + 14);
+  }
+
+  function open(bk) {
+    books.forEach(function (o) { if (o !== bk) shut(o); });
+    side(bk);
+    bk.classList.add('open');
+    var c = bk.querySelector('.bcover');
+    if (c) c.setAttribute('aria-expanded', 'true');
+    bk.querySelectorAll('.bleaf a').forEach(function (a) { a.removeAttribute('tabindex'); });
+    var first = bk.querySelector('.bleaf a');
+    if (first && !still) setTimeout(function () { first.focus({ preventScroll: true }); }, 520);
+  }
+
+  books.forEach(function (bk) {
+    shut(bk);
+    var cover = bk.querySelector('.bcover[data-book]');
+    if (!cover) return;
+    cover.addEventListener('click', function () {
+      if (bk.classList.contains('open')) shut(bk); else open(bk);
     });
+  });
+
+  window.addEventListener('resize', function () {
+    var o = document.querySelector('.minbook.open');
+    if (o) side(o);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var o = document.querySelector('.minbook.open');
+    if (!o) return;
+    shut(o);
+    var c = o.querySelector('.bcover');
+    if (c) c.focus({ preventScroll: true });
+  });
+
+  document.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('.minbook')) return;
+    var o = document.querySelector('.minbook.open');
+    if (o) shut(o);
   });
 })();
 
@@ -55,4 +101,22 @@
   }
   size(); seed(); draw();
   window.addEventListener('resize', function () { size(); seed(); });
+})();
+
+// The lamp on the desk leans a little toward whoever is at it.
+(function () {
+  if (!document.body.classList.contains('ground-desk')) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var R = document.documentElement.style, pending = false, mx = 50, my = 26;
+  window.addEventListener('pointermove', function (e) {
+    mx = 50 + ((e.clientX / innerWidth) - 0.5) * 22;
+    my = 26 + ((e.clientY / innerHeight) - 0.5) * 14;
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(function () {
+      pending = false;
+      R.setProperty('--lx', mx.toFixed(1) + '%');
+      R.setProperty('--ly', my.toFixed(1) + '%');
+    });
+  }, { passive: true });
 })();

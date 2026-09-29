@@ -216,6 +216,45 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
 
   // ---- Rosters ----
 
+  // Who has been paid what. The rolls give the names; this page gives the money.
+  app.get('/finance/people', seeLedger, wrap(async (req, res) => {
+    const name = String(req.query.name || '').slice(0, 140);
+    const person = name ? F.wageFor(name) : null;
+    if (name && !person) return res.say('No such person', 'No roll and no wage entry answers to that name.', 404);
+    page(res, req, person ? person.name : 'People & Wages',
+      FV.peoplePage(req.user, F.wagePeople(), F.wageTotals(), req.session.csrf, mayPay(req.user), person));
+  }));
+
+  app.post('/finance/people', seeLedger, needPay, checkCsrf, wrap(async (req, res) => {
+    let to = '/finance/people';
+    try {
+      const w = F.wagePay(req.body || {}, req.user);
+      Activity.log(req.user, 'paid wages', w.name, String(w.amount));
+      req.session.flash = { text: `${w.name} is paid ${w.amount} septims.`, seal: true };
+      to += '?name=' + encodeURIComponent(w.name);
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect(to);
+  }));
+
+  app.post('/finance/people/roll', seeLedger, needPay, checkCsrf, wrap(async (req, res) => {
+    try {
+      const made = F.wagePayRoll(String((req.body || {}).groupId || ''), req.body || {}, req.user);
+      const sum = made.reduce((n, w) => n + Number(w.amount || 0), 0);
+      Activity.log(req.user, 'paid a whole roll', (F.groupGet(String(req.body.groupId)) || {}).name || '', String(sum));
+      req.session.flash = { text: `${made.length} paid, ${sum} septims in all.`, seal: true };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/people');
+  }));
+
+  app.post('/finance/people/:id/remove', seeLedger, needPay, checkCsrf, wrap(async (req, res) => {
+    const w = F.wageGet(String(req.params.id));
+    F.wageRemove(String(req.params.id));
+    if (w) Activity.log(req.user, 'struck a wage entry', w.name, String(w.amount));
+    req.session.flash = { text: 'Struck from the wage book.' };
+    const name = String((req.body || {}).name || (w && w.name) || '');
+    res.redirect('/finance/people' + (name ? '?name=' + encodeURIComponent(name) : ''));
+  }));
+
   app.get('/finance/rosters', seeLedger, wrap(async (req, res) => {
     const gs = F.groups().filter(g => g.active !== false);
     const asked = F.groupGet(String(req.query.group || ''));
