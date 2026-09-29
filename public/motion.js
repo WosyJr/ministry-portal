@@ -383,47 +383,286 @@
     if (row) row.classList.add('tearing');
   }, true);
 
-  // Snow past the window, in the cold months and no others.
-  if (doc.body.classList.contains('wintry') && !still) {
-    var sc = el('canvas');
-    sc.id = 'snow';
-    sc.setAttribute('aria-hidden', 'true');
-    doc.body.appendChild(sc);
-    var sx = sc.getContext('2d'), flakes = [];
-    var ssize = function () {
-      var r = window.devicePixelRatio || 1;
-      sc.width = Math.floor(innerWidth * r); sc.height = Math.floor(innerHeight * r);
-      sc.style.width = innerWidth + 'px'; sc.style.height = innerHeight + 'px';
-      sx.setTransform(r, 0, 0, r, 0, 0);
-    };
-    var sseed = function () {
-      flakes = [];
-      for (var i = 0; i < 70; i++) {
-        flakes.push({
-          x: Math.random() * innerWidth, y: Math.random() * innerHeight,
-          r: 0.8 + Math.random() * 2.1, a: 0.25 + Math.random() * 0.45,
-          vy: 0.22 + Math.random() * 0.7, vx: -0.28 + Math.random() * 0.2,
-          p: Math.random() * 6.28
-        });
-      }
-    };
-    var sdraw = function () {
-      sx.clearRect(0, 0, innerWidth, innerHeight);
-      for (var i = 0; i < flakes.length; i++) {
-        var f = flakes[i];
-        f.y += f.vy; f.p += 0.012; f.x += f.vx + Math.sin(f.p) * 0.3;
-        if (f.y > innerHeight + 6) { f.y = -6; f.x = Math.random() * innerWidth; }
-        if (f.x < -6) f.x = innerWidth + 6;
-        if (f.x > innerWidth + 6) f.x = -6;
-        sx.beginPath();
-        sx.fillStyle = 'rgba(255,252,245,' + f.a.toFixed(2) + ')';
-        sx.arc(f.x, f.y, f.r, 0, 6.2832);
-        sx.fill();
-      }
-      requestAnimationFrame(sdraw);
-    };
-    ssize(); sseed(); sdraw();
-    window.addEventListener('resize', function () { ssize(); sseed(); });
+  // The lamp over the whole portal: it swings on its chain, and it leans a
+  // little toward whoever is at the page.
+  if (doc.body.classList.contains('lamplit') && !still) {
+    var lamp = el('div');
+    lamp.id = 'lamp';
+    lamp.setAttribute('aria-hidden', 'true');
+    doc.body.appendChild(lamp);
+    var lroot = doc.documentElement.style, lpend = false, lx = 50, ly = 8;
+    window.addEventListener('pointermove', function (e) {
+      lx = 50 + ((e.clientX / innerWidth) - 0.5) * 26;
+      ly = 8 + ((e.clientY / innerHeight) - 0.5) * 16;
+      if (lpend) return;
+      lpend = true;
+      requestAnimationFrame(function () {
+        lpend = false;
+        lroot.setProperty('--lx', lx.toFixed(1) + '%');
+        lroot.setProperty('--ly', ly.toFixed(1) + '%');
+      });
+    }, { passive: true });
   }
+
+  // The date turns over when the province's day actually changes, not merely
+  // the next time somebody happens to load a page.
+  (function () {
+    var stamp = doc.querySelector('.daystamp');
+    if (!stamp) return;
+    var shown = stamp.textContent.trim();
+    try { sessionStorage.setItem('daystamp', shown); } catch (_) {}
+    if (still) return;
+    setInterval(function () {
+      if (doc.hidden) return;
+      fetch('/api/today', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d || !d.text || d.text === shown) return;
+          shown = d.text;
+          stamp.classList.add('turning');
+          setTimeout(function () { stamp.textContent = shown; }, 360);
+          setTimeout(function () { stamp.classList.remove('turning'); }, 900);
+          try { sessionStorage.setItem('daystamp', shown); } catch (_) {}
+        })
+        .catch(function () {});
+    }, 60000);
+  })();
+
+  // Weather over the province, whatever the season says it is.
+  (function () {
+    if (still) return;
+    var season = (doc.body.className.match(/season-(\w+)/) || [])[1];
+    if (!season || season === 'none') return;
+    var cv = el('canvas');
+    cv.id = 'weather';
+    cv.setAttribute('aria-hidden', 'true');
+    doc.body.appendChild(cv);
+    var g = cv.getContext('2d'), bits = [], W = 0, H = 0;
+
+    var KIND = {
+      snow: { n: 80, make: function () { return { r: 0.8 + Math.random() * 2.2, a: 0.28 + Math.random() * 0.5, vy: 0.3 + Math.random() * 0.9, vx: -0.3 + Math.random() * 0.6, sway: 0.5, col: '255,252,245' }; } },
+      rain: { n: 130, make: function () { return { r: 0.7 + Math.random() * 0.7, len: 9 + Math.random() * 13, a: 0.14 + Math.random() * 0.24, vy: 7 + Math.random() * 7, vx: -1.5 - Math.random() * 1.2, sway: 0, col: '198,214,236' }; } },
+      sun: { n: 46, make: function () { return { r: 0.7 + Math.random() * 1.7, a: 0.1 + Math.random() * 0.3, vy: -(0.05 + Math.random() * 0.2), vx: -0.12 + Math.random() * 0.24, sway: 0.2, col: '255,232,176' }; } },
+      leaf: { n: 26, make: function () { return { r: 3 + Math.random() * 4, a: 0.3 + Math.random() * 0.4, vy: 0.5 + Math.random() * 0.9, vx: -0.7 - Math.random() * 0.8, sway: 1.2, spin: -0.04 + Math.random() * 0.08, ang: Math.random() * 6.28,
+        col: ['166,92,28', '140,66,22', '178,120,38', '120,52,18'][Math.floor(Math.random() * 4)] }; } }
+    };
+    var K = KIND[season];
+    if (!K) return;
+
+    function size() {
+      var d = window.devicePixelRatio || 1;
+      W = innerWidth; H = innerHeight;
+      cv.width = Math.floor(W * d); cv.height = Math.floor(H * d);
+      cv.style.width = W + 'px'; cv.style.height = H + 'px';
+      g.setTransform(d, 0, 0, d, 0, 0);
+    }
+    function seed() {
+      bits = [];
+      for (var i = 0; i < K.n; i++) {
+        var b = K.make();
+        b.x = Math.random() * W; b.y = Math.random() * H; b.p = Math.random() * 6.28;
+        bits.push(b);
+      }
+    }
+    // The wind gets up and drops again over minutes. Nothing announces it; the
+    // snow simply starts going sideways.
+    var gust = 1, gustTo = 1, gustT = 0;
+    function wind() {
+      gustT -= 1;
+      if (gustT <= 0) { gustTo = 0.35 + Math.random() * Math.random() * 2.3; gustT = 900 + Math.random() * 2400; }
+      gust += (gustTo - gust) * 0.0016;
+    }
+
+    function draw() {
+      wind();
+      g.clearRect(0, 0, W, H);
+      for (var i = 0; i < bits.length; i++) {
+        var b = bits[i];
+        b.y += b.vy * (season === 'rain' ? (0.7 + gust * 0.5) : 1);
+        b.p += 0.02;
+        b.x += b.vx * gust + (b.sway ? Math.sin(b.p) * b.sway * gust : 0);
+        if (b.spin !== undefined) b.ang += b.spin;
+        if (b.y > H + 20) { b.y = -20; b.x = Math.random() * W; }
+        if (b.y < -20) { b.y = H + 20; b.x = Math.random() * W; }
+        if (b.x < -20) b.x = W + 20;
+        if (b.x > W + 20) b.x = -20;
+        if (season === 'rain') {
+          g.beginPath();
+          g.strokeStyle = 'rgba(' + b.col + ',' + b.a.toFixed(2) + ')';
+          g.lineWidth = b.r;
+          g.moveTo(b.x, b.y);
+          g.lineTo(b.x - b.vx * gust * 1.6, b.y - b.len);
+          g.stroke();
+        } else if (season === 'leaf') {
+          g.save();
+          g.translate(b.x, b.y);
+          g.rotate(b.ang);
+          g.beginPath();
+          g.fillStyle = 'rgba(' + b.col + ',' + b.a.toFixed(2) + ')';
+          g.ellipse(0, 0, b.r, b.r * 0.46, 0, 0, 6.2832);
+          g.fill();
+          g.restore();
+        } else {
+          g.beginPath();
+          g.fillStyle = 'rgba(' + b.col + ',' + b.a.toFixed(2) + ')';
+          g.arc(b.x, b.y, b.r, 0, 6.2832);
+          g.fill();
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+    size(); seed(); draw();
+    window.addEventListener('resize', function () { size(); seed(); });
+  })();
+
+  var season = (doc.body.className.match(/season-(\w+)/) || [])[1] || 'none';
+
+  // Frost creeps in at the corners of the glass in the deep cold, and is gone
+  // by the spring.
+  if (season === 'snow' && !still) {
+    var fr = el('div');
+    fr.id = 'frost';
+    fr.setAttribute('aria-hidden', 'true');
+    fr.innerHTML = '<span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span>';
+    doc.body.appendChild(fr);
+    setTimeout(function () { fr.classList.add('on'); }, 900);
+  }
+
+  // Breath on a cold page: a fog blooms at the foot of the glass and fades.
+  if (season === 'snow' && !still) {
+    var br = el('div');
+    br.id = 'breath';
+    br.setAttribute('aria-hidden', 'true');
+    doc.body.appendChild(br);
+    var puff = function () {
+      if (!doc.hidden) {
+        br.classList.remove('on');
+        void br.offsetWidth;
+        br.classList.add('on');
+      }
+      setTimeout(puff, 34000 + Math.random() * 26000);
+    };
+    setTimeout(puff, 6000 + Math.random() * 9000);
+  }
+
+  // Ink runs when it rains: now and then a heading bleeds a hair at the edge.
+  if (season === 'rain' && !still) {
+    var heads = [].slice.call(doc.querySelectorAll('main h1, main h2, main h3, .mast h1'));
+    if (heads.length) {
+      var bleed = function () {
+        if (!doc.hidden) {
+          var h = heads[Math.floor(Math.random() * heads.length)];
+          h.classList.add('bleeding');
+          setTimeout(function () { h.classList.remove('bleeding'); }, 3400);
+        }
+        setTimeout(bleed, 22000 + Math.random() * 26000);
+      };
+      setTimeout(bleed, 8000 + Math.random() * 12000);
+    }
+  }
+
+  // Candlelight reaches the edges: warm at the top of the glass, cool at the foot.
+  if (doc.body.classList.contains('lamplit') && !still) {
+    var hearth = el('div');
+    hearth.id = 'hearth';
+    hearth.setAttribute('aria-hidden', 'true');
+    doc.body.appendChild(hearth);
+  }
+
+  // The lamp gutters when the door opens.
+  var gutterOnce = function () {
+    if (still) return;
+    doc.body.classList.add('gutter');
+    setTimeout(function () { doc.body.classList.remove('gutter'); }, 520);
+  };
+  doc.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href]');
+    if (!a || e.metaKey || e.ctrlKey || e.button) return;
+    var href = a.getAttribute('href') || '';
+    if (!href || href[0] === '#' || /^(mailto|tel|javascript):/i.test(href)) return;
+    if (a.host && a.host !== location.host) return;
+    gutterOnce();
+  }, true);
+
+  // The wax cools, and if it is left alone it cracks.
+  if (!still) {
+    doc.querySelectorAll('.presswax').forEach(function (w) {
+      var crack = el('span', 'crackline');
+      crack.innerHTML = '<svg viewBox="0 0 120 120" aria-hidden="true">' +
+        '<path d="M58 14 L63 38 L55 52 L66 70 L58 88 L64 106" fill="none" ' +
+        'stroke="rgba(52,8,8,.55)" stroke-width="1.4" stroke-linecap="round"/>' +
+        '<path d="M63 38 L78 44 M58 88 L44 94" fill="none" stroke="rgba(52,8,8,.4)" stroke-width="1"/></svg>';
+      w.appendChild(crack);
+      setTimeout(function () { w.classList.add('cracked'); }, 60000);
+    });
+  }
+
+  // The quill runs dry as a long writ is filled, and re-inks when it is sent.
+  doc.querySelectorAll('form').forEach(function (f) {
+    var fields = f.querySelectorAll('input:not([type=hidden]):not([type=submit]), textarea, select');
+    if (fields.length < 6) return;
+    var go = f.querySelector('button[type=submit], button:not([type])');
+    if (!go) return;
+    go.classList.add('dryquill');
+    var ink = function () {
+      var n = 0;
+      fields.forEach(function (x) { n += String(x.value || '').length; });
+      go.style.setProperty('--dry', Math.min(1, n / 900).toFixed(3));
+    };
+    f.addEventListener('input', ink);
+    f.addEventListener('submit', function () {
+      go.style.setProperty('--dry', '0');
+      go.classList.add('reinked');
+    });
+    ink();
+  });
+
+  // Pages remember they were read, and a long register keeps a ribbon at the
+  // last row you opened.
+  (function () {
+    var KEY = 'read:' + location.pathname.replace(/\/[^/]*$/, '/');
+    var SEEN = 'seen';
+    function load(k) { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (_) { return []; } }
+    function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v.slice(-400))); } catch (_) {} }
+
+    var seen = load(SEEN);
+    if (seen.indexOf(location.pathname) < 0) { seen.push(location.pathname); save(SEEN, seen); }
+
+    doc.querySelectorAll('.ledger tbody tr, .recprev, .reqcard').forEach(function (row) {
+      var a = row.querySelector('a[href]');
+      if (!a) return;
+      var href = a.getAttribute('href');
+      if (href && seen.indexOf(href.split('?')[0]) >= 0) row.classList.add('thumbed');
+    });
+
+    var tb = doc.querySelector('.ledger tbody');
+    if (!tb || tb.rows.length < 12) return;
+    var rows = [].slice.call(tb.rows);
+    var mark = null;
+    try { mark = localStorage.getItem(KEY); } catch (_) {}
+    var keyOf = function (r) { var a = r.querySelector('a[href]'); return a ? a.getAttribute('href') : (r.cells[0] || {}).textContent; };
+    rows.forEach(function (r) {
+      r.addEventListener('click', function () { try { localStorage.setItem(KEY, keyOf(r)); } catch (_) {} });
+    });
+    if (!mark) return;
+    var found = rows.filter(function (r) { return keyOf(r) === mark; })[0];
+    if (!found) return;
+    found.classList.add('marked');
+    var tab = el('button', null, 'Where you left off');
+    tab.id = 'ribbon-mark';
+    tab.type = 'button';
+    var place = function () {
+      var r = found.getBoundingClientRect();
+      var t = Math.min(innerHeight - 60, Math.max(70, r.top + scrollY - scrollY));
+      tab.style.top = Math.round(Math.max(70, Math.min(innerHeight - 60, r.top))) + 'px';
+    };
+    tab.addEventListener('click', function () {
+      found.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center' });
+    });
+    doc.body.appendChild(tab);
+    place();
+    window.addEventListener('scroll', place, { passive: true });
+    window.addEventListener('resize', place);
+  })();
 
 })();

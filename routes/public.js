@@ -25,6 +25,14 @@ module.exports = (app, { checkCsrf, wrap }) => {
 
   app.get('/', (req, res) => res.send(V.landingPage(res.locals.today, req.user, Settings.landing())));
 
+  // The province's own clock, so the date on the page can turn over while
+  // somebody is still looking at it.
+  app.get('/api/today', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const t = Settings.today();
+    res.json({ text: t.text, day: t.day, month: t.month, year: t.year });
+  });
+
   app.get('/hall', wrap(async (req, res) => {
     res.page({ title: 'The Hall', active: 'home', body: V.publicHome(notices(await publicRows()), res.locals.today) });
   }));
