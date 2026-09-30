@@ -1987,3 +1987,5 @@ body.lamplit details.fold{background:rgba(246,237,214,.72)}
 .handlist .chip{flex:0 0 auto;min-width:20px;text-align:center;padding:1px 5px}
 body.arcane .readcard{border-left:3px solid var(--arc)}
 body.arcane .readcard .no{font-size:13px}
+.ticketmeta code{font-size:13px}
+body.arcane .ticketmeta a{color:var(--arc);word-break:break-all}
