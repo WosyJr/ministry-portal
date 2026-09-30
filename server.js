@@ -10,6 +10,7 @@ const G = require('./lib/google');
 const S = require('./lib/store');
 const Records = require('./lib/records');
 const Settings = require('./lib/settings');
+const StaffRoom = require('./lib/staffroom');
 const Notify = require('./lib/notify');
 
 const app = express();
@@ -52,7 +53,7 @@ app.use((req, res, next) => {
     const entered = req.session.entered; req.session.entered = null;
     // opts is spread first so an explicit flash that is undefined cannot wipe
     // the one waiting in the session after a redirect.
-    res.status(status || 200).send(V.layout({ ...opts, user: req.user, csrf: req.session.csrf, flash: opts.flash || flash, today: res.locals.today, badges: b, siteGround: Settings.pageGround(), siteCursor: Settings.cursor(), entered }));
+    res.status(status || 200).send(V.layout({ ...opts, user: req.user, csrf: req.session.csrf, flash: opts.flash || flash, today: res.locals.today, badges: b, siteGround: Settings.pageGround(), siteCursor: Settings.cursor(), entered, staffRoom: StaffRoom.mayEnter(req.user) }));
   };
   res.say = (title, text, status) => res.page({ title, body: V.message(title, text) }, status);
   next();
@@ -70,6 +71,7 @@ const ctx = { checkCsrf, wrap, back };
 require('./routes/public')(app, ctx);
 require('./routes/staff')(app, ctx);
 require('./routes/admin')(app, ctx);
+require('./routes/staffroom')(app, ctx);
 require('./routes/war')(app, ctx);
 require('./routes/justice')(app, ctx);
 require('./routes/finance')(app, ctx);
