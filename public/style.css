@@ -1985,3 +1985,5 @@ body.lamplit details.fold{background:rgba(246,237,214,.72)}
 .handlist{margin:6px 0 10px}
 .handlist li{display:flex;gap:8px;align-items:center;font-size:14px;margin:4px 0}
 .handlist .chip{flex:0 0 auto;min-width:20px;text-align:center;padding:1px 5px}
+body.arcane .readcard{border-left:3px solid var(--arc)}
+body.arcane .readcard .no{font-size:13px}
