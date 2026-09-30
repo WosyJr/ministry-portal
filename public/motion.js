@@ -657,6 +657,54 @@
     }
   })();
 
+  if (doc.body.classList.contains('arcane') && !still) {
+    var cv = doc.getElementById('arcmotes');
+    if (cv && cv.getContext) {
+      var cx = cv.getContext('2d'), motes = [], W = 0, H = 0;
+      var size = function () {
+        W = cv.width = innerWidth * devicePixelRatio;
+        H = cv.height = innerHeight * devicePixelRatio;
+        cv.style.width = innerWidth + 'px';
+        cv.style.height = innerHeight + 'px';
+      };
+      size();
+      window.addEventListener('resize', size, { passive: true });
+      var HUES = ['127,227,224', '180,140,255', '242,201,126'];
+      for (var i = 0; i < 64; i++) {
+        motes.push({
+          x: Math.random(), y: Math.random(),
+          r: (0.6 + Math.random() * 1.9) * devicePixelRatio,
+          vy: -(0.02 + Math.random() * 0.07) / 100,
+          vx: (Math.random() - 0.5) / 900,
+          p: Math.random() * Math.PI * 2,
+          sp: 0.004 + Math.random() * 0.012,
+          h: HUES[Math.floor(Math.random() * HUES.length)]
+        });
+      }
+      (function draw() {
+        cx.clearRect(0, 0, W, H);
+        for (var j = 0; j < motes.length; j++) {
+          var m2 = motes[j];
+          m2.y += m2.vy; m2.x += m2.vx; m2.p += m2.sp;
+          if (m2.y < -0.04) { m2.y = 1.04; m2.x = Math.random(); }
+          if (m2.x < -0.04) m2.x = 1.04;
+          if (m2.x > 1.04) m2.x = -0.04;
+          var a = 0.22 + Math.sin(m2.p) * 0.2;
+          if (a < 0) a = 0;
+          var px = m2.x * W, py = m2.y * H;
+          var g = cx.createRadialGradient(px, py, 0, px, py, m2.r * 5);
+          g.addColorStop(0, 'rgba(' + m2.h + ',' + a.toFixed(3) + ')');
+          g.addColorStop(1, 'rgba(' + m2.h + ',0)');
+          cx.fillStyle = g;
+          cx.beginPath();
+          cx.arc(px, py, m2.r * 5, 0, Math.PI * 2);
+          cx.fill();
+        }
+        requestAnimationFrame(draw);
+      })();
+    }
+  }
+
   // The date turns over when the province's day actually changes, not merely
   // the next time somebody happens to load a page.
   (function () {
