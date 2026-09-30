@@ -20,6 +20,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   const needJudge = (req, res, next) => mayJudge(req.user) ? next() : next('forbidden');
   const needComplaints = (req, res, next) => mayComplaints(req.user) ? next() : next('forbidden');
   const needInquire = (req, res, next) => mayInquire(req.user) ? next() : next('forbidden');
+  const needMinister = (req, res, next) => (req.user && req.user.all) ? next() : next('forbidden');
   const needAdmin = (req, res, next) => {
     if (!req.user) { req.session.returnTo = req.originalUrl; return res.redirect('/justice/entrance'); }
     return isAdmin(req.user) ? next() : next('forbidden');
@@ -36,7 +37,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   app.get('/justice', wrap(async (req, res) => {
     const holders = {};
     jusOfficers().filter(o => o.active !== false).forEach(o => { (holders[o.rank] = holders[o.rank] || []).push(o.name); });
-    page(res, req, 'The Ministry of Justice', JV.hall(req.user, J.tallies(), holders));
+    page(res, req, 'The Ministry of Justice', JV.hall(req.user, J.tallies(req.user), holders));
   }));
 
   app.get('/justice/standards', wrap(async (req, res) => {
@@ -144,7 +145,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   }));
 
   app.get('/justice/cases', seeCases, wrap(async (req, res) => {
-    page(res, req, 'The Bench', JV.docket(req.user, J.cases().slice().reverse(), J.tallies(), req.session.csrf, mayFile(req.user), benchOfficers(), J.judgedCases()));
+    page(res, req, 'The Bench', JV.docket(req.user, J.cases().slice().reverse(), J.tallies(req.user), req.session.csrf, mayFile(req.user), benchOfficers(), J.judgedCases()));
   }));
 
   app.post('/justice/cases', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
@@ -244,23 +245,52 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/justice/custody');
   }));
 
+  const INQ_PATH = /^\/justice\/inquisitions\/([^/]+)(?:\/|$)/;
+  app.use((req, res, next) => {
+    const m = INQ_PATH.exec(req.path);
+    if (!m) return next();
+    if (!req.user) return next();
+    const i = J.inqGet(decodeURIComponent(m[1]));
+    if (!i) return next();
+    if (!J.inqVisible(req.user, i)) return next('forbidden');
+    req.inq = i;
+    next();
+  });
+
   app.get('/justice/inquisitions', seeCases, wrap(async (req, res) => {
-    page(res, req, 'Inquisitions', JV.inquisitionsPage(req.user, J.inquisitions().slice().reverse(), req.session.csrf, mayInquire(req.user), J.cases()));
+    page(res, req, 'Inquisitions', JV.inquisitionsPage(req.user, J.inqVisibleList(req.user).slice().reverse(), req.session.csrf, mayInquire(req.user), J.cases()));
   }));
 
   app.post('/justice/inquisitions', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
     try {
       const i = J.inqOpen(req.body || {}, req.user);
-      Activity.log(req.user, 'opened an inquisition', i.no, i.subject);
+      Activity.log(req.user, 'opened an inquisition', i.no);
       return res.redirect('/justice/inquisitions/' + encodeURIComponent(i.id));
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
     res.redirect('/justice/inquisitions');
   }));
 
+  const inqOfficers = () => {
+    const ids = new Set(jusRanks().filter(r => (r.perms || []).includes('jusinquire')).map(r => r.id));
+    return U.list().filter(o => o.active !== false && ids.has(o.rank));
+  };
+
   app.get('/justice/inquisitions/:id', seeCases, wrap(async (req, res) => {
-    const i = J.inqGet(String(req.params.id));
+    const i = req.inq || J.inqGet(String(req.params.id));
     if (!i) return res.say('No such inquisition', 'No inquisition answers to that.', 404);
-    page(res, req, i.no, JV.inquisitionPage(req.user, i, req.session.csrf, mayInquire(req.user), J.cases()));
+    const assign = (req.user && req.user.all) ? inqOfficers() : null;
+    page(res, req, i.no, JV.inquisitionPage(req.user, i, req.session.csrf, mayInquire(req.user), J.cases(), assign));
+  }));
+
+  app.post('/justice/inquisitions/:id/assign', seeCases, needMinister, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const i = J.inqAssign(id, req.body.assigned, req.body.openall);
+      Activity.log(req.user, 'set who may see an inquisition', i.no);
+      backInq(req, res, id, i.open
+        ? `${i.no} is open to every officer of the Ministry.`
+        : `${i.no} is closed to all but the ${J.inqAssigned(i).length === 1 ? 'Inquisitor' : 'Inquisitors'} assigned to it.`);
+    } catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
   const backInq = (req, res, id, msg, err) => {
