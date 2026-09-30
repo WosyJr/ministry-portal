@@ -1928,3 +1928,31 @@ body.arcane .ruleset li b,body.arcane .plainlist li b{display:inline;font-family
   font-weight:600;color:var(--arc-3);margin:0}
 body.arcane .ruleset li{padding:11px 0;color:var(--aink)}
 body.arcane .ruleset li span{color:var(--afade)}
+
+body.arcane .finder{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:14px 0 6px}
+body.arcane .findbox{flex:1 1 320px;min-width:220px;padding:9px 13px;font-size:15.5px;
+  background:rgba(8,7,22,.72);border:1px solid var(--aline);color:var(--aink);border-radius:3px}
+body.arcane .findbox::placeholder{color:#7C77A4}
+body.arcane .findbox:focus-visible{outline:2px solid var(--arc);outline-offset:1px}
+body.arcane .findcount{font-family:var(--display);font-size:13.5px;color:var(--arc-2);white-space:nowrap}
+body.arcane .warnline{color:var(--arc-3)}
+body.arcane .listtable td{padding:7px 12px;vertical-align:top}
+body.arcane .listtable td.idcell{width:1%;white-space:nowrap}
+body.arcane .listtable tbody tr[hidden]{display:none}
+body.arcane [data-findgroup][hidden]{display:none}
+body.arcane .subnav.staffnav{flex-wrap:wrap;row-gap:0}
+
+body.arcane .planes{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:8px}
+body.arcane .planecol{background:var(--glass-2);border:1px solid var(--aline);border-radius:4px;padding:14px 16px 16px}
+body.arcane .artlist{list-style:none;margin:8px 0 0;padding:0}
+body.arcane .artlist li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 0;border-bottom:1px solid rgba(150,134,255,.14)}
+body.arcane .artlist li:last-child{border-bottom:0}
+body.arcane .artname{font-family:var(--display);font-size:16.5px;color:var(--aink)}
+body.arcane .artacts{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+body.arcane .artacts .btn.small,body.arcane .rowacts .btn.small{padding:3px 9px;font-size:13px}
+body.arcane .rowacts{white-space:nowrap;width:1%}
+body.arcane .rowacts form{display:inline}
+@media(max-width:760px){ body.arcane .planes{grid-template-columns:1fr} }
+body.arcane .hextable tr.known td{color:var(--arc-3)}
+body.arcane .hextable tr.known code{color:var(--arc-3);background:rgba(242,201,126,.12)}
