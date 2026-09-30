@@ -214,7 +214,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     if (!noHand) merged.sig[cs.sigIndex] = prev.signed.trim();
     const holdId = (Ranks2.HOLD_BY_NAME[rec.Hold] || {}).id || '';
     try {
-      await Records.edit(cs.recordNo, merged, holdId, { username: 'hand of ' + (cs.toName || 'another party') });
+      await Records.edit(cs.recordNo, merged, holdId, { username: 'hand of ' + (cs.toName || 'another party') }, { keepHold: true, keepStatus: true });
     } catch (e) {
       return again(e.message);
     }

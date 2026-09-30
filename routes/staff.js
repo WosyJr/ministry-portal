@@ -398,6 +398,12 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     Activity.log(req.user, yes ? 'posted it publicly' : 'withdrew it from public view', rec['Record No']);
     return yes ? 'Posted for the public.' : 'Withdrawn from public view.';
   }));
+  r.post('/records/:no/seal', ...recPost('approve', async (req, rec) => {
+    await Records.sealNow(rec['Record No'], req.user);
+    Activity.log(req.user, 'set a seal upon a record', rec['Record No']);
+    return `The seal is set upon ${rec['Record No']}.`;
+  }));
+
   r.post('/records/:no/approve', ...recPost('approve', async (req, rec) => {
     const filer = Records.meta(rec).filer;
     await Records.approve(rec['Record No'], req.user);
