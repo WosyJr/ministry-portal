@@ -49,7 +49,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
 
   app.get('/finance', wrap(async (req, res) => {
     const holders = {};
-    finOfficers().filter(o => o.active !== false).forEach(o => {
+    finOfficers().filter(o => o.active !== false && o.listed !== false).forEach(o => {
       const r = Ranks.get(o.rank);
       if (r) (holders[r.name] = holders[r.name] || []).push(o.name);
     });

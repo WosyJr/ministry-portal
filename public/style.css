@@ -1956,3 +1956,29 @@ body.arcane .rowacts form{display:inline}
 @media(max-width:760px){ body.arcane .planes{grid-template-columns:1fr} }
 body.arcane .hextable tr.known td{color:var(--arc-3)}
 body.arcane .hextable tr.known code{color:var(--arc-3);background:rgba(242,201,126,.12)}
+.namepick{flex-wrap:wrap;gap:6px}
+.namepick .btn.ghost.small.on{background:var(--blood);color:#F3E6C4;border-color:var(--blood)}
+.folded{margin-bottom:10px}
+details.fold{padding:0;margin-bottom:6px}
+details.fold > summary{list-style:none;cursor:pointer;padding:9px 14px;font-size:15px;
+  display:flex;flex-wrap:wrap;gap:7px;align-items:center;color:var(--sepia)}
+details.fold > summary::-webkit-details-marker{display:none}
+details.fold > summary::before{content:"\25B8";color:var(--blood);font-size:13px;
+  transition:transform .18s ease;display:inline-block;flex:0 0 auto}
+details.fold[open] > summary::before{transform:rotate(90deg)}
+details.fold > summary:hover{color:var(--ink);background:rgba(120,30,25,.05)}
+details.fold[open] > summary{border-bottom:1px solid var(--line)}
+details.fold .foldbody{padding:11px 14px 13px;
+  animation:unfold .26s cubic-bezier(.3,.8,.35,1);transform-origin:top center}
+details.fold .foldbody > *:first-child{margin-top:0}
+body.lamplit details.fold{background:rgba(246,237,214,.72)}
+.wants{margin:8px 0 4px}
+.wants li{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:var(--sepia);margin:4px 0}
+.wants .flagmark{flex:0 0 auto;font-size:13px;line-height:1.45;opacity:.9}
+.wants li.bad .flagmark{color:var(--blood)}
+.wants li.warn .flagmark{color:#9A6B1E}
+.wants li.bad{color:var(--ink)}
+.ok-note{color:var(--sepia);opacity:.7;font-style:italic;margin:8px 0 4px}
+.btn.danger{border-color:var(--blood);color:var(--blood)}
+.btn.danger:hover{background:var(--blood);color:#F3E6C4}
+.btn.small.danger:not(.ghost){background:var(--blood);color:#F3E6C4}

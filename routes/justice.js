@@ -36,7 +36,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
 
   app.get('/justice', wrap(async (req, res) => {
     const holders = {};
-    jusOfficers().filter(o => o.active !== false).forEach(o => { (holders[o.rank] = holders[o.rank] || []).push(o.name); });
+    jusOfficers().filter(o => o.active !== false && o.listed !== false).forEach(o => { (holders[o.rank] = holders[o.rank] || []).push(o.name); });
     page(res, req, 'The Ministry of Justice', JV.hall(req.user, J.tallies(req.user), holders));
   }));
 
@@ -245,6 +245,13 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/justice/custody');
   }));
 
+  app.get('/justice/desk', seeCases, needInquire, wrap(async (req, res) => {
+    const mine = req.user.all
+      ? J.inquisitions()
+      : J.inquisitions().filter(i => J.inqAssigned(i).includes(String(req.user.username).toLowerCase()));
+    page(res, req, 'My Desk', JV.deskPage(req.user, mine.slice().reverse()));
+  }));
+
   const INQ_PATH = /^\/justice\/inquisitions\/([^/]+)(?:\/|$)/;
   app.use((req, res, next) => {
     const m = INQ_PATH.exec(req.path);
@@ -279,7 +286,11 @@ module.exports = (app, { checkCsrf, wrap }) => {
     const i = req.inq || J.inqGet(String(req.params.id));
     if (!i) return res.say('No such inquisition', 'No inquisition answers to that.', 404);
     const assign = (req.user && req.user.all) ? inqOfficers() : null;
-    page(res, req, i.no, JV.inquisitionPage(req.user, i, req.session.csrf, mayInquire(req.user), J.cases(), assign));
+    const bench = benchOfficers();
+    const me = req.user && !bench.some(o => o.username === req.user.username)
+      ? [{ username: req.user.username, name: req.user.name, rankName: req.user.rankName || '' }] : [];
+    const roster = { inquisitors: inqOfficers(), officers: me.concat(bench) };
+    page(res, req, i.no, JV.inquisitionPage(req.user, i, req.session.csrf, mayInquire(req.user), J.cases(), assign, roster));
   }));
 
   app.post('/justice/inquisitions/:id/assign', seeCases, needMinister, checkCsrf, wrap(async (req, res) => {

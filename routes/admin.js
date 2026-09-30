@@ -172,6 +172,11 @@ module.exports = (app, { checkCsrf, wrap }) => {
         const name = id => (Ranks.BRANCHES.find(b => b.id === id) || {}).short || id;
         req.session.flash = { text: was === now ? `${t.name} is amended.` : `${t.name} is moved from ${name(was)} to ${name(now)}.` };
         Activity.log(req.user, 'moved an officer', '', `${t.name}: ${name(was)} → ${name(now)}`);
+      } else if (act === 'remove') {
+        if (who === req.user.username) throw new Error('You cannot strike your own name from the rolls.');
+        U.remove(who);
+        req.session.flash = { text: `${t.name} is struck from the rolls entirely. Anything they filed stands in their name.` };
+        Activity.log(req.user, 'removed an officer', '', t.name);
       } else throw new Error('No such action.');
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
     res.redirect('/province');
