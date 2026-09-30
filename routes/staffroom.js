@@ -34,9 +34,42 @@ module.exports = function (app, { checkCsrf }) {
 
   app.get('/province/staff', gate, (req, res) => show(req, res, 'commands', SRV.commandsPage(srv(req), K.mayAssign(req.user))));
   app.get('/province/staff/codes', gate, (req, res) => show(req, res, 'codes', SRV.codesPage(srv(req), K.mayAssign(req.user))));
-  app.get('/province/staff/orders', gate, (req, res) => show(req, res, 'orders', SRV.ordersPage(srv(req), K.mayAssign(req.user))));
+  app.get('/province/staff/orders', gate, (req, res, next) => (srv(req) === 'sovngarde' ? next() : res.redirect('/province/staff?server=' + srv(req))),
+    (req, res) => show(req, res, 'orders', SRV.ordersPage(srv(req), K.mayAssign(req.user))));
   app.get('/province/staff/guides', gate, (req, res) => show(req, res, 'guides', SRV.guidesPage(srv(req), K.mayAssign(req.user))));
-  app.get('/province/staff/trackers', gate, (req, res) => show(req, res, 'trackers', SRV.trackersPage(srv(req), K.mayAssign(req.user))));
+  // Trackers and Work Orders are Sovngarde's own; Paarthurnax does not carry them.
+  const sovOnly = (req, res, next) => (srv(req) === 'sovngarde' ? next() : res.redirect('/province/staff?server=' + srv(req)));
+
+  app.get('/province/staff/trackers', gate, sovOnly, (req, res) => {
+    const e = String(req.query.edit || '');
+    let editing = null;
+    if (e.startsWith('artifact:')) { const row = K.artifacts().find(a => a.id === e.slice(9)); if (row) editing = { kind: 'artifact', row }; }
+    if (e.startsWith('hq:')) { const row = K.hqs().find(h => h.id === e.slice(3)); if (row) editing = { kind: 'hq', row }; }
+    show(req, res, 'trackers', SRV.trackersPage(srv(req), K.mayAssign(req.user), K.artifacts(), K.hqs(), req.session.csrf, editing));
+  });
+
+  const trackBack = req => '/province/staff/trackers?server=' + srv(req);
+  const tryDo = (req, res, fn, ok) => {
+    try { fn(); req.session.flash = { text: ok }; }
+    catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect(trackBack(req));
+  };
+
+  app.post('/province/staff/trackers/artifact', gate, checkCsrf, (req, res) =>
+    tryDo(req, res, () => K.artifactAdd(req.body || {}), 'Added to the tracker.'));
+  app.post('/province/staff/trackers/artifact/:id', gate, checkCsrf, (req, res) =>
+    tryDo(req, res, () => K.artifactEdit(String(req.params.id), req.body || {}), 'The artifact is amended.'));
+  app.post('/province/staff/trackers/artifact/:id/move', gate, checkCsrf, (req, res) =>
+    tryDo(req, res, () => K.artifactMove(String(req.params.id), (req.body || {}).to), 'Moved.'));
+  app.post('/province/staff/trackers/artifact/:id/remove', gate, checkCsrf, (req, res) =>
+    tryDo(req, res, () => K.artifactRemove(String(req.params.id)), 'Struck from the tracker.'));
+
+  app.post('/province/staff/trackers/hq', gate, checkCsrf, (req, res) =>
+    tryDo(req, res, () => K.hqAdd(req.body || {}), 'Added to the tracker.'));
+  app.post('/province/staff/trackers/hq/:id', gate, checkCsrf, (req, res) =>
+    tryDo(req, res, () => K.hqEdit(String(req.params.id), req.body || {}), 'The property is amended.'));
+  app.post('/province/staff/trackers/hq/:id/remove', gate, checkCsrf, (req, res) =>
+    tryDo(req, res, () => K.hqRemove(String(req.params.id)), 'Struck from the tracker.'));
 
   app.get('/province/staff/hex', gate, (req, res) => {
     const raw = String((req.query && req.query.ids) || '');
@@ -44,7 +77,17 @@ module.exports = function (app, { checkCsrf }) {
   });
   app.post('/province/staff/hex', gate, checkCsrf, (req, res) => {
     const raw = String((req.body && req.body.ids) || '');
-    show(req, res, 'hex', SRV.hexPage(srv(req), K.convertMany(raw), raw, req.session.csrf, K.mayAssign(req.user)));
+    const out = K.convertMany(raw);
+    K.rememberConverted(out, req.user);
+    show(req, res, 'hex', SRV.hexPage(srv(req), out, raw, req.session.csrf, K.mayAssign(req.user)));
+  });
+
+  // The live converter tells the roll what it converted, so ids picked up while
+  // working are saved without anyone having to remember to save them.
+  app.post('/province/staff/hex/remember', gate, checkCsrf, (req, res) => {
+    const out = K.convertMany((req.body || {}).ids);
+    const added = K.rememberConverted(out, req.user);
+    res.json({ ok: true, added, seen: out.filter(r => r.ok).length });
   });
 
   app.get('/province/staff/notices', gate, (req, res) => {
@@ -73,6 +116,32 @@ module.exports = function (app, { checkCsrf }) {
   const withRights = () => U.list().map(u => {
     const r = Ranks.get(u.rank);
     return { ...u, all: !!(r && r.all), title: u.rankName || (r && r.name) || '' };
+  });
+
+  app.get('/province/staff/locations', gate, (req, res) => show(req, res, 'locations', SRV.locationsPage(srv(req), K.mayAssign(req.user))));
+  app.get('/province/staff/bestiary', gate, (req, res) => show(req, res, 'bestiary', SRV.bestiaryPage(srv(req), K.mayAssign(req.user))));
+  app.get('/province/staff/dungeons', gate, (req, res) => show(req, res, 'dungeons', SRV.dungeonsPage(srv(req), K.mayAssign(req.user))));
+  app.get('/province/staff/console', gate, (req, res) => show(req, res, 'console', SRV.consolePage(srv(req), K.mayAssign(req.user))));
+  app.get('/province/staff/training', gate, (req, res) => show(req, res, 'training', SRV.trainingPage(srv(req), K.mayAssign(req.user))));
+
+  app.get('/province/staff/items', gate, (req, res) => {
+    const flash = req.session.flash; req.session.flash = null;
+    show(req, res, 'items', SRV.itemsPage(srv(req), K.items(), req.session.csrf, flash && flash.text, K.mayAssign(req.user)));
+  });
+
+  app.post('/province/staff/items', gate, checkCsrf, (req, res) => {
+    const b = req.body || {};
+    try {
+      const r = K.itemAdd(b.name, b.ref, b.note, req.user);
+      req.session.flash = { text: r.added ? 'Put on the roll.' : 'That id was already on the roll, as ' + r.entry.name + '.' };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/province/staff/items?server=' + srv(req));
+  });
+
+  app.post('/province/staff/items/import', gate, checkCsrf, (req, res) => {
+    const r = K.itemImport((req.body || {}).dump, req.user);
+    req.session.flash = { text: r.added + ' added, ' + r.already + ' already on the roll, ' + r.skipped + ' line(s) passed over, out of ' + r.total + '.' };
+    res.redirect('/province/staff/items?server=' + srv(req));
   });
 
   app.get('/province/staff/who', minister, (req, res) =>
