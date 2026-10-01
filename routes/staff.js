@@ -56,7 +56,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     if (A.can(u, 'correspondence')) d.counts.push([Records.requests().filter(q => q.status === 'Pending').length, 'ministry requests', '/staff/correspondence']);
     if (A.can(u, 'request')) d.requests = Records.requests().filter(q => q.by === u.username).reverse().slice(0, 8);
     if (A.can(u, 'bulletin')) d.bulletin = S.read('bulletin.json', []).sort((a, b) => (b.pinned - a.pinned) || b.at.localeCompare(a.at)).slice(0, 3);
-    res.page({ title: 'My Desk', active: 'desk', body: LV.deskFull(u, await deskItems(u)) + SV.desk(u, d), flash: !G.connected() && u.all ? { err: true, html: 'The Ministry archives are not connected to Google yet. <a href="/admin/settings">Connect them in the Study</a>.' } : null });
+    res.page({ title: 'My Desk', active: 'desk', body: SV.desk(u, d), flash: !G.connected() && u.all ? { err: true, html: 'The Ministry archives are not connected to Google yet. <a href="/admin/settings">Connect them in the Study</a>.' } : null });
   }));
 
 
@@ -763,18 +763,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   const Desk = require('../lib/desk');
   const LV = require('../lib/lettersviews');
 
-  const deskItems = async (u) => {
-    const rows = (await Records.visible(u)) || [];
-    let week = null;
-    try {
-      const rank = Ranks.get(u.rank);
-      if (rank && rank.quota) week = Quota.weekFor(u, rows, Quota.weekKey(new Date()), Records.meta);
-    } catch (_) {}
-    const Lapse = require('../lib/lapse');
-    try { Lapse.sweep(rows, Records.meta, (no, st) => Records.setStatus(no, st), (who, text, link) => Notify.notifyUser(who, text, link)); } catch (_) {}
-    return Desk.gather(u, rows, { week, letters: Letters.waitingFor(u), due: Lapse.comingDue(rows, Records.meta, u) });
-  };
-
   r.get('/desk', need('desk'), wrap(async (req, res) => {
     const rows = (await Records.visible(req.user)) || [];
     let week = null;
@@ -782,12 +770,8 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       const rank = Ranks.get(req.user.rank);
       if (rank && rank.quota) week = Quota.weekFor(req.user, rows, Quota.weekKey(new Date()), Records.meta);
     } catch (_) {}
-    const Lapse = require('../lib/lapse');
-    try {
-      Lapse.sweep(rows, Records.meta, (no, st) => Records.setStatus(no, st), (who, text, link) => Notify.notifyUser(who, text, link));
-    } catch (_) {}
-    const d = Desk.gather(req.user, rows, { week, letters: Letters.waitingFor(req.user), due: Lapse.comingDue(rows, Records.meta, req.user) });
-    res.page({ title: 'Your Desk', active: 'deskfull', body: LV.deskFull(req.user, d) });
+    const d = Desk.gather(req.user, rows, { week, letters: Letters.waitingFor(req.user) });
+    res.page({ title: 'Your Desk', active: 'desk', body: LV.deskFull(req.user, d) });
   }));
 
   const Guide = require('../lib/guide');
@@ -796,77 +780,25 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   const Roll = require('../lib/roll');
   const RollV = require('../lib/rollviews');
 
-  const onlyMinister = (req, res, next) => (req.user && req.user.all ? next() : next('forbidden'));
-
   r.get('/roll', (req, res) => {
     Roll.seed();
-    Roll.reconcile();
-    res.page({
-      title: 'The Roll of Office', active: 'roll',
-      body: RollV.rollPage(req.user, Roll.offices(), req.session.csrf, { people: Roll.people(), struck: Roll.struck() }, Object.fromEntries(U.list().map(o => [o.username, o.arms])))
-    });
+    res.page({ title: 'The Roll of Office', active: 'roll', body: RollV.rollPage(req.user, Roll.offices()) });
   });
 
-  r.post('/roll/strike', onlyMinister, checkCsrf, (req, res) => {
-    const gone = Roll.strike(String(req.body.id || ''));
-    req.session.flash = gone
-      ? { text: `${gone.name} is struck from the roll of ${gone.rankName}.` }
-      : { err: true, text: 'That line is no longer upon the roll.' };
-    res.redirect('/staff/roll');
-  });
-
-  r.post('/roll/forget', onlyMinister, checkCsrf, (req, res) => {
-    const un = String(req.body.username || '').trim();
-    if (!un) { req.session.flash = { err: true, text: 'Choose a name first.' }; return res.redirect('/staff/roll'); }
-    const n = Roll.forget(un);
-    req.session.flash = { text: n ? `${n} line${n === 1 ? '' : 's'} taken off the roll. The roll will not enter them again.` : 'Nothing upon the roll for that name. They are kept off it all the same.' };
-    res.redirect('/staff/roll');
-  });
-
-  r.post('/roll/restore', onlyMinister, checkCsrf, (req, res) => {
-    Roll.restore(String(req.body.username || '').trim());
-    req.session.flash = { text: 'They may be entered upon the roll again.' };
-    res.redirect('/staff/roll');
-  });
-
-  const branchFlags = u => {
-    const key = u && u.all ? 'civil' : Ranks.userBranch(u);
-    return key === 'civil' || key === 'general' ? {} : { branch: key };
-  };
-
-  r.get('/guide', wrap(async (req, res) => {
+  r.get('/guide', need('desk'), wrap(async (req, res) => {
     const rows = (await Records.visible(req.user)) || [];
-    res.page({
-      title: 'What You May Do', active: 'guide',
-      ...branchFlags(req.user),
-      body: GV.guidePage(req.user, Guide.progress(req.user, rows, Records.meta), req.session.csrf)
-    });
+    res.page({ title: 'What You May Do', active: 'guide', body: GV.guidePage(req.user, Guide.progress(req.user, rows, Records.meta), req.session.csrf), noVeil: true });
   }));
 
-  r.post('/guide/seen', checkCsrf, (req, res) => {
+  r.post('/guide/seen', need('desk'), checkCsrf, (req, res) => {
     Guide.markTourSeen(req.user);
-    req.session.tourStep = null;
-    res.redirect(back(req, Guide.branchHome(req.user)));
+    res.redirect(String(req.body.back || '/staff'));
   });
 
-  r.post('/guide/step', checkCsrf, (req, res) => {
-    const n = parseInt(req.body.n, 10);
-    const steps = Guide.tourFor(req.user);
-    if (!Number.isFinite(n) || n < 0 || n >= steps.length) {
-      Guide.markTourSeen(req.user);
-      req.session.tourStep = null;
-      req.session.flash = { text: 'That is the tour. You may take it again from your Profile whenever you like.' };
-      return res.redirect('/staff/guide');
-    }
-    req.session.tourStep = n;
-    res.redirect(steps[n].at || Guide.branchHome(req.user));
-  });
-
-  r.post('/guide/again', checkCsrf, (req, res) => {
+  r.post('/guide/again', need('desk'), checkCsrf, (req, res) => {
     Guide.resetTour(req.user);
-    req.session.tourStep = 0;
-    const steps = Guide.tourFor(req.user);
-    res.redirect((steps[0] && steps[0].at) || Guide.branchHome(req.user));
+    req.session.flash = { text: 'You will be shown round the hall again.' };
+    res.redirect('/staff');
   });
 
   r.post('/desk/read', need('desk'), checkCsrf, (req, res) => {
@@ -923,25 +855,8 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     await sweepWeeks(rows);
     const wk = Quota.weekKey(new Date());
     const w = Quota.weekFor(req.user, rows, wk, Records.meta);
-    res.page({ title: 'Your Week', active: 'week', body: QV.weekPage(req.user, w, Quota.recordFor(req.user.username).slice(0, 10), Quota.settings(), req.session.csrf) });
+    res.page({ title: 'Your Week', active: 'week', body: QV.weekPage(req.user, w, Quota.recordFor(req.user.username).slice(0, 10), Quota.settings()) });
   }));
-
-  r.post('/week/mark', need('file'), needQuota, checkCsrf, (req, res) => {
-    const wk = String(req.body.week || Quota.weekKey(new Date()));
-    if (wk !== Quota.weekKey(new Date())) {
-      req.session.flash = { err: true, text: 'A week that has closed is the Minister’s to set, not yours.' };
-      return res.redirect('/staff/week');
-    }
-    const line = String(req.body.line || '');
-    if (line !== 'duty') {
-      req.session.flash = { err: true, text: 'Only your duty is yours to tick. The rest fills itself in as you file.' };
-      return res.redirect('/staff/week');
-    }
-    const raw = String(req.body.met || '');
-    Quota.markLine(req.user.username, wk, 'duty', raw === '' ? null : raw === '1', req.user);
-    req.session.flash = { text: raw === '' ? 'Your duty is back as it stood.' : raw === '1' ? 'Your duty is ticked off for this week.' : 'Your duty is marked still owed.' };
-    res.redirect('/staff/week');
-  });
 
   r.get('/delegates', need('officers'), wrap(async (req, res) => {
     const rows = await Records.visible(req.user) || [];
@@ -975,26 +890,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     Quota.setWeek(who, wk, met, req.user);
     Activity.log(req.user, met ? 'set a week as met' : 'set a week as short', '', t.name);
     req.session.flash = { text: `${t.name}: the week of ${Quota.weekLabel(wk)} is set down as ${met ? 'met' : 'short'}.` };
-    res.redirect('/staff/delegates');
-  });
-
-  r.post('/delegates/:username/mark', need('officers'), checkCsrf, (req, res) => {
-    const who = String(req.params.username);
-    const t = U.view(who);
-    const wk = String(req.body.week || Quota.weekKey(new Date()));
-    if (!t) { req.session.flash = { err: true, text: 'No officer answers to that.' }; return res.redirect('/staff/delegates'); }
-    if (req.body.clear) {
-      Quota.clearHand(who, wk);
-      Activity.log(req.user, 'took their hand off a Delegate’s week', '', t.name);
-      req.session.flash = { text: `${t.name}: the week of ${Quota.weekLabel(wk)} stands on the count alone again.` };
-      return res.redirect('/staff/delegates');
-    }
-    const line = String(req.body.line || '');
-    const raw = String(req.body.met || '');
-    if (!line) { req.session.flash = { err: true, text: 'Nothing answers to that.' }; return res.redirect('/staff/delegates'); }
-    Quota.markLine(who, wk, line, raw === '' ? null : raw === '1', req.user);
-    Activity.log(req.user, raw === '' ? 'undid a line of a Delegate’s week' : raw === '1' ? 'ticked off a line of a Delegate’s week' : 'marked a line of a Delegate’s week still owed', '', t.name);
-    req.session.flash = { text: raw === '' ? `${t.name}: that line stands on the count again.` : `${t.name}: that line is set ${raw === '1' ? 'done' : 'still owed'} by your hand.` };
     res.redirect('/staff/delegates');
   });
 
@@ -1034,203 +929,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.page({ title: 'Due for the Archives', active: 'report', body: SV.archiveDue(rows && Records.dueForArchive(rows), Number(Settings.get().retentionDays) || 0, req.user, req.session.csrf) });
   }));
 
-  r.get('/profile', (req, res) => {
-    const me = U.view(req.user.username) || {};
-    me.oath = require('../lib/ceremony').taken(req.user.username);
-    res.page({ title: 'Profile', ...branchFlags(req.user), body: SV.profile(req.user, me, req.session.csrf) });
-  });
-
-  const ArmsV = require('../lib/armsviews');
-  const Arms = require('../lib/arms');
-  const Cer = require('../lib/ceremony');
-  const CerV = require('../lib/ceremonyviews');
-  const Seals = require('../lib/seals');
-  const SealsV = require('../lib/sealsviews');
-  const Gaz = require('../lib/gazette');
-  const GazV = require('../lib/gazetteviews');
-
-  const mayGazette = (req, res, next) =>
-    (req.user && (req.user.all || A.can(req.user, 'publish'))) ? next() : next('forbidden');
-
-  const isoDay = d => new Date(d).toISOString().slice(0, 10);
-
-  function readItems(b) {
-    const n = Math.max(0, Math.min(200, parseInt(b.count, 10) || 0));
-    const out = [];
-    for (let i = 0; i < n; i++) {
-      if (b['drop_' + i]) continue;
-      const head = String(b['head_' + i] || '').trim();
-      const body = String(b['body_' + i] || '').trim();
-      if (!head && !body) continue;
-      out.push({ section: b['section_' + i], head, body, link: b['link_' + i] });
-    }
-    return out;
-  }
-
-  r.get('/gazette', mayGazette, wrap(async (req, res) => {
-    if (!req.query.new && !req.query.from) {
-      return res.page({ title: 'The Gazette', active: 'gazette', body: GazV.managePage(Gaz.issues(), req.session.csrf) });
-    }
-    const to = String(req.query.to || isoDay(Date.now()));
-    const from = String(req.query.from || isoDay(Date.now() - 7 * 86400000));
-    const rows = (await Records.visible(req.user)) || [];
-    let roll = [];
-    try { roll = Roll.all(); } catch (_) {}
-    const draft = Gaz.draftFor(rows, from, to, { roll }, res.locals.today, Gaz.nextNo());
-    res.page({ title: 'Set an Issue', active: 'gazette', body: GazV.editPage(draft, req.session.csrf, true, { from, to }) });
-  }));
-
-  r.post('/gazette', mayGazette, checkCsrf, (req, res) => {
-    const b = req.body || {};
-    const issue = Gaz.create({
-      no: b.no, title: b.title, day: b.day, from: b.from, to: b.to, lead: b.lead, items: readItems(b)
-    }, req.user, res.locals.today);
-    if (b.publish) Gaz.publish(issue.no, req.user, true);
-    Activity.log(req.user, b.publish ? 'published an issue of the Gazette' : 'set an issue of the Gazette', 'No. ' + issue.numeral);
-    req.session.flash = { text: b.publish ? `Gazette No. ${issue.numeral} is published.` : `Gazette No. ${issue.numeral} is in the drawer.` };
-    res.redirect(b.publish ? '/gazette/' + issue.no : '/staff/gazette/' + issue.no);
-  });
-
-  r.get('/gazette/:no', mayGazette, (req, res) => {
-    const i = Gaz.get(String(req.params.no));
-    if (!i) return not(res, 'No such issue', 'The Gazette has no issue under that number.');
-    res.page({ title: 'Amend an Issue', active: 'gazette', body: GazV.editPage(i, req.session.csrf, false, null) });
-  });
-
-  r.post('/gazette/:no', mayGazette, checkCsrf, (req, res) => {
-    const no = String(req.params.no);
-    const b = req.body || {};
-    if (b.strike) {
-      const gone = Gaz.remove(no);
-      Activity.log(req.user, 'struck an issue of the Gazette', gone ? 'No. ' + gone.numeral : no);
-      req.session.flash = { text: gone ? `Gazette No. ${gone.numeral} is struck.` : 'Nothing answers to that.' };
-      return res.redirect('/staff/gazette');
-    }
-    const i = Gaz.update(no, { title: b.title, day: b.day, lead: b.lead, items: readItems(b) }, req.user);
-    if (!i) { req.session.flash = { err: true, text: 'Nothing answers to that.' }; return res.redirect('/staff/gazette'); }
-    if (b.unpublish) Gaz.publish(no, req.user, false);
-    else if (b.publish) Gaz.publish(no, req.user, true);
-    Activity.log(req.user, 'amended an issue of the Gazette', 'No. ' + i.numeral);
-    req.session.flash = { text: b.unpublish ? `Gazette No. ${i.numeral} is off the page.` : b.publish ? `Gazette No. ${i.numeral} is published.` : `Gazette No. ${i.numeral} is amended.` };
-    res.redirect(b.unpublish ? '/staff/gazette/' + no : b.publish ? '/gazette/' + no : '/staff/gazette/' + no);
-  });
-
-  const mayKeepSeals = (req, res, next) =>
-    (req.user && (req.user.all || A.can(req.user, 'officers') || A.can(req.user, 'edit'))) ? next() : next('forbidden');
-
-  r.get('/seals', mayKeepSeals, (req, res) => {
-    res.page({ title: 'The Register of Seals', active: 'seals', body: SealsV.managePage(Seals.sorted(), req.session.csrf) });
-  });
-
-  r.get('/seals/new', mayKeepSeals, (req, res) => {
-    res.page({ title: 'Enter a Seal', active: 'seals', body: SealsV.editPage(null, req.session.csrf, true) });
-  });
-
-  r.post('/seals/new', mayKeepSeals, checkCsrf, (req, res) => {
-    const b = req.body || {};
-    try {
-      const s = Seals.add({ ...b, arms: b }, req.user);
-      Activity.log(req.user, 'entered a seal upon the register', '', s.power);
-      req.session.flash = { text: `${s.power} is entered upon the register of seals.` };
-      res.redirect('/seals/' + encodeURIComponent(s.id));
-    } catch (e) {
-      req.session.flash = { err: true, text: e.message };
-      res.redirect('/staff/seals/new');
-    }
-  });
-
-  r.post('/seals/seed', mayKeepSeals, checkCsrf, (req, res) => {
-    const n = Seals.seed(req.user);
-    req.session.flash = { text: n ? `${n} seals entered upon the register.` : 'The register already has entries. Nothing was changed.' };
-    res.redirect('/staff/seals');
-  });
-
-  r.get('/seals/:id', mayKeepSeals, (req, res) => {
-    const s = Seals.get(String(req.params.id));
-    if (!s) return not(res, 'No such seal', 'Nothing upon the register answers to that.');
-    res.page({ title: 'Amend a Seal', active: 'seals', body: SealsV.editPage(s, req.session.csrf, false) });
-  });
-
-  r.post('/seals/:id', mayKeepSeals, checkCsrf, (req, res) => {
-    const id = String(req.params.id);
-    const b = req.body || {};
-    if (b.strike) {
-      const gone = Seals.remove(id);
-      Activity.log(req.user, 'struck a seal from the register', '', gone ? gone.power : '');
-      req.session.flash = { text: gone ? `${gone.power} is struck from the register.` : 'Nothing answers to that.' };
-      return res.redirect('/staff/seals');
-    }
-    const s = Seals.edit(id, { ...b, arms: b }, req.user);
-    if (!s) { req.session.flash = { err: true, text: 'That could not be amended. A seal needs the name of whose it is.' }; return res.redirect('/staff/seals/' + encodeURIComponent(id)); }
-    Activity.log(req.user, 'amended a seal upon the register', '', s.power);
-    req.session.flash = { text: `${s.power} is amended.` };
-    res.redirect('/seals/' + encodeURIComponent(id));
-  });
-
-  r.get('/ceremony', (req, res) => {
-    const done = Cer.taken(req.user.username);
-    if (done && !req.query.again) {
-      req.session.flash = { text: 'You have already taken up this office.' };
-      return res.redirect('/staff/profile');
-    }
-    let before = [];
-    try {
-      const seen = new Set();
-      before = Roll.forRank(req.user.rank)
-        .filter(e => e.username !== req.user.username && e.until)
-        .filter(e => { if (seen.has(e.username)) return false; seen.add(e.username); return true; })
-        .slice(0, 6);
-    } catch (_) {}
-    res.page({
-      title: 'The Taking Up of an Office', noVeil: true,
-      body: CerV.ceremonyPage(req.user, res.locals.today, req.session.csrf, C.MINISTER_NAME, before)
-    });
-  });
-
-  r.post('/ceremony', checkCsrf, (req, res) => {
-    if (!req.body.read) {
-      req.session.flash = { err: true, text: 'Tick the box to say you have read the Articles.' };
-      return res.redirect('/staff/ceremony');
-    }
-    const sig = String(req.body.signature || '').trim();
-    if (sig.length < 2) {
-      req.session.flash = { err: true, text: 'Write your name to set your hand to it.' };
-      return res.redirect('/staff/ceremony');
-    }
-    Cer.take(req.user, res.locals.today, sig);
-    Activity.log(req.user, 'took up their office', '');
-    try { Notify.notifyRank('minister', `${req.user.name} has taken up the office of ${req.user.title || req.user.rankName}.`, '/staff/officers/' + req.user.username); } catch (_) {}
-    if (!Guide.hasSeenTour(req.user)) {
-      req.session.tourStep = 0;
-      const steps = Guide.tourFor(req.user);
-      req.session.flash = { text: 'The office is yours. Now here is the hall.' };
-      return res.redirect((steps[0] && steps[0].at) || Guide.branchHome(req.user));
-    }
-    req.session.flash = { text: 'The office is yours.' };
-    res.redirect(Guide.branchHome(req.user));
-  });
-
-  r.get('/arms', (req, res) => {
-    const me = U.view(req.user.username) || {};
-    res.page({ title: 'Your Arms', active: 'arms', ...branchFlags(req.user), body: ArmsV.armsPage(req.user, me.arms, req.session.csrf) });
-  });
-
-  r.post('/arms', checkCsrf, (req, res) => {
-    const b = req.body || {};
-    if (b.clear) {
-      U.update(req.user.username, { arms: null });
-      req.session.flash = { text: 'Your arms are taken down.' };
-      return res.redirect('/staff/profile');
-    }
-    const arms = Arms.clean({
-      shape: b.shape, field: b.field, division: b.division, second: b.second,
-      ordinary: b.ordinary, ordinaryTint: b.ordinaryTint, charge: b.charge, chargeTint: b.chargeTint, motto: b.motto
-    });
-    U.update(req.user.username, { arms });
-    Activity.log(req.user, 'set their arms', '');
-    req.session.flash = { text: `Your arms are set down: ${Arms.blazon(arms)}.` };
-    res.redirect('/staff/arms');
-  });
+  r.get('/profile', (req, res) => res.page({ title: 'Profile', body: SV.profile(req.user, U.view(req.user.username), req.session.csrf) }));
   r.get('/id-card', (req, res) => res.send(V.idCardPrint(U.view(req.user.username), '/seal/minister', res.locals.today)));
   r.post('/profile/settings', checkCsrf, (req, res) => {
     U.update(req.user.username, { prefs: { plain: !!req.body.plain, glossary: !!req.body.glossary } });

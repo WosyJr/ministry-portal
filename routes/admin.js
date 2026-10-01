@@ -144,25 +144,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     } catch (e) { return provinceBody(req, res, null, { err: true, text: e.message }); }
   });
 
-  r.get('/vault', ministerOnly, (req, res) => {
-    const V = require('../lib/vault');
-    const st = V.state();
-    const rows = (d) => d.map(x => `<tr><td>${x.day}</td><td class="num">${x.file}</td></tr>`).join('');
-    res.page({ title: 'The Strongroom', body: `<section>
-      <h2>The Strongroom</h2>
-      <p class="lede">A copy of the whole Docket is kept here, outside Google. If Google cannot be reached, the hall reads from this copy rather than showing nothing.</p>
-      ${st.has
-        ? `<p class="notice">The last copy holds <b>${st.count} records</b>, taken ${new Date(st.at).toLocaleString('en-GB')}.</p>`
-        : '<p class="notice">No copy has been kept yet. One is written the first time the Docket is read.</p>'}
-      <div class="section-label">Copies by the day</div>
-      ${st.days.length
-        ? `<div class="tablewrap"><table class="ledger"><thead><tr><th>Day</th><th class="num">File</th></tr></thead><tbody>${rows(st.days)}</tbody></table></div>`
-        : '<p class="hint">None yet.</p>'}
-      <p class="hint">One copy a day is kept, and the last ${V.KEEP} days are held. They sit in the Ministry\u2019s own data, beside the rolls \u2014 so a copy survives anything that happens to the sheet.</p>
-      <p class="hint">This copy is read-only. Nothing can be filed or sealed while Google is unreachable, because a record must have a number and a place on the sheet before it is real.</p>
-    </section>` });
-  });
-
   r.post('/people/:username/:action', ministerOnly, checkCsrf, (req, res) => {
     const who = req.params.username, act = req.params.action;
     try {

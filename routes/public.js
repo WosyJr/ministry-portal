@@ -251,39 +251,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.page({ title: 'Register of Licenses', active: 'licenses', body: V.licenses(list, rows === null ? 'The Register is being prepared.' : '', heraldry) });
   }));
 
-  const Seals = require('../lib/seals');
-  const SealsV = require('../lib/sealsviews');
-  const Gaz = require('../lib/gazette');
-  const GazV = require('../lib/gazetteviews');
-
-  const mayEditGazette = u => !!(u && (u.all || A.can(u, 'publish')));
-
-  app.get('/gazette', (req, res) => {
-    res.page({ title: 'The Provincial Gazette', active: 'gazette', body: GazV.indexPage(Gaz.published(), mayEditGazette(req.user)) });
-  });
-
-  app.get('/gazette/:no', (req, res) => {
-    const i = Gaz.get(String(req.params.no));
-    if (!i || (!i.published && !mayEditGazette(req.user))) return res.say('No such issue', 'The Gazette has no issue under that number.', 404);
-    res.page({ title: 'Gazette No. ' + (i.numeral || i.no), active: 'gazette', body: GazV.issuePage(i, mayEditGazette(req.user)) });
-  });
-
-  app.get('/seals', (req, res) => {
-    const q = String(req.query.q || '').slice(0, 80);
-    const manage = !!(req.user && (req.user.all || A.can(req.user, 'officers') || A.can(req.user, 'edit')));
-    if (!q) return res.page({ title: 'Seals of Other Powers', active: 'seals', body: SealsV.indexPage(Seals.byKind(), '', manage) });
-    const hits = Seals.search(q);
-    const groups = Seals.KINDS.map(k => ({ ...k, items: hits.filter(s => s.kind === k.id) })).filter(k => k.items.length);
-    res.page({ title: 'Seals of Other Powers', active: 'seals', body: SealsV.indexPage(groups, q, manage) });
-  });
-
-  app.get('/seals/:id', (req, res) => {
-    const s = Seals.get(String(req.params.id));
-    if (!s) return res.say('No such seal', 'Nothing upon the register answers to that.', 404);
-    const manage = !!(req.user && (req.user.all || A.can(req.user, 'officers') || A.can(req.user, 'edit')));
-    res.page({ title: s.power, active: 'seals', body: SealsV.sealPage(s, manage) });
-  });
-
   app.get('/laws', wrap(async (req, res) => {
     const rows = await publicRows();
     const directives = (rows || []).filter(r => r.Form === 'directive' && r.Public === 'Yes' && !Records.isClosed(r)).reverse();
@@ -318,25 +285,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     if (!U.authenticate(u.username, cur)) return fail('Your current password is not correct.');
     if (next !== again) return fail('The two new passwords do not match.');
     if (next === cur) return fail('Choose a password different from the current one.');
-    const wasFirst = !!u.mustChange;
     try { U.update(u.username, { password: next, mustChange: false }); } catch (e) { return fail(e.message); }
-    if (wasFirst) {
-      try {
-        const Guide = require('../lib/guide');
-        const Cer = require('../lib/ceremony');
-        const fresh = U.sessionUser(u.username);
-        if (A.isStaff(fresh) && !Cer.taken(fresh.username)) {
-          req.session.flash = { text: 'Your password is set. One thing before the hall.' };
-          return res.redirect('/staff/ceremony');
-        }
-        if (!Guide.hasSeenTour(fresh)) {
-          req.session.tourStep = 0;
-          const steps = Guide.tourFor(fresh);
-          req.session.flash = { text: 'Your password is set. Welcome \u2014 here is the hall.' };
-          return res.redirect((steps[0] && steps[0].at) || A.homeFor(fresh));
-        }
-      } catch (_) {}
-    }
     req.session.flash = { text: 'Your password is changed.' };
     res.redirect(A.homeFor(U.sessionUser(u.username)));
   });
