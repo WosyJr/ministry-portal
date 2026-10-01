@@ -2202,18 +2202,52 @@ body.lamplit[class*="hour-"]::after{background:transparent}
 .weekline.byhand .weekbody .dim{font-style:italic}
 
 .holdmapwrap{position:relative}
-.holdmap.sheet{width:100%;height:auto;display:block}
-.holdmap.sheet .hmhit{fill:transparent;stroke:none}
-.holdmap.sheet .hmhold{cursor:pointer;outline:none}
-.holdmap.sheet .hmpin{pointer-events:none}
-.holdmap.sheet .hmhalo{fill:rgba(107,20,20,0);transition:fill .18s ease}
-.holdmap.sheet .hmdot{fill:#EFE4C6;stroke:#6E5126;stroke-width:1.6;transition:stroke .18s ease,stroke-width .18s ease}
-.holdmap.sheet .busy .hmdot{fill:#6B1414;stroke:#F1E6CC;stroke-width:2}
-.holdmap.sheet .hmpin text{fill:#F6EEDA;font-family:var(--body);font-size:15px;font-weight:600}
-.holdmap.sheet .hmhold:hover .hmhalo,.holdmap.sheet .hmhold:focus .hmhalo,.holdmap.sheet .hmhold.here .hmhalo{fill:rgba(107,20,20,.22)}
-.holdmap.sheet .hmhold:hover .hmdot,.holdmap.sheet .hmhold:focus .hmdot{stroke:#6B1414;stroke-width:2.6}
-.holdmap.sheet .hmhold.here .hmdot{fill:#6B1414;stroke:#F1E6CC;stroke-width:2.6}
-.holdmap.sheet .hmhold.here .hmhalo{fill:rgba(107,20,20,.3)}
+.holdmap.drawn{width:100%;height:auto;display:block}
+.holdmap.drawn .hmsea{fill:#A99E84}
+.holdmap.drawn .hmwash{fill:none;stroke:#948A72;stroke-width:1.2;stroke-linejoin:round;
+  transform-box:fill-box;transform-origin:center}
+.holdmap.drawn .hmwash.w1{opacity:.5;transform:scale(1.016)}
+.holdmap.drawn .hmwash.w2{opacity:.3;transform:scale(1.034)}
+.holdmap.drawn .hmwash.w3{opacity:.16;transform:scale(1.054)}
+.holdmap.drawn .hmcoast{fill:#EDE1C0;stroke:none}
+.holdmap.drawn .hmcoastline{fill:none;stroke:#5E4620;stroke-width:2.6;stroke-linejoin:round}
+.holdmap.drawn .hmland{fill:#6B1414;fill-opacity:var(--load,0);stroke:none;mix-blend-mode:multiply;
+  transition:fill-opacity .18s ease}
+.holdmap.drawn .hmhold{cursor:pointer;outline:none}
+.holdmap.drawn .hmhold:hover .hmland,.holdmap.drawn .hmhold:focus .hmland{fill-opacity:.2}
+.holdmap.drawn .hmhold.here .hmland{fill-opacity:.17}
+.holdmap.drawn .hmborder{fill:none;stroke:#6E5126;stroke-width:1.6;opacity:.65;
+  stroke-dasharray:9 5;stroke-linecap:round}
+.holdmap.drawn .hmriver{fill:none;stroke:#7F96AA;stroke-width:2.4;opacity:.62;stroke-linecap:round}
+.holdmap.drawn .hmlake{fill:#8FA6B8;opacity:.5;stroke:#6F8698;stroke-width:1.2}
+.holdmap.drawn .pk-d{fill:#9C8154}
+.holdmap.drawn .pk-l{fill:#D2BE95}
+.holdmap.drawn .pk-e{fill:none;stroke:#5E4620;stroke-width:1.1;stroke-linejoin:round;stroke-linecap:round;opacity:.85}
+.holdmap.drawn .tr{fill:#4E5F3C;opacity:.78}
+.holdmap.drawn .hmtower{fill:#3A2208}
+.holdmap.drawn .hm-name{font-family:var(--display);font-size:27px;fill:#3A2208;letter-spacing:.04em;
+  paint-order:stroke;stroke:#EDE1C0;stroke-width:5px;stroke-linejoin:round}
+.holdmap.drawn .hm-seat{font-family:var(--body);font-size:13.5px;fill:#8A2B1B;font-style:italic;
+  paint-order:stroke;stroke:#EDE1C0;stroke-width:3.5px;stroke-linejoin:round}
+.holdmap.drawn .hm-sea{font-family:var(--display);font-style:italic;font-size:22px;fill:#6B6250;letter-spacing:.3em}
+.holdmap.drawn .hm-edge{font-family:var(--body);font-size:14px;fill:#6E6553;letter-spacing:.24em;text-transform:uppercase}
+.holdmap.drawn .hm-range,.holdmap.drawn .hm-water{font-family:var(--body);font-size:12.5px;fill:#5E4620;
+  font-style:italic;letter-spacing:.07em;opacity:.9;paint-order:stroke;stroke:#EDE1C0;stroke-width:3px;stroke-linejoin:round}
+.holdmap.drawn .hm-water{fill:#4A6678}
+.holdmap.drawn .hmdot{fill:#6B1414;stroke:#F3E9CD;stroke-width:2.4}
+.holdmap.drawn .hmpin text{fill:#F6EEDA;font-family:var(--body);font-size:15px;font-weight:600}
+.holdmap.drawn .hmhold:hover .hmdot,.holdmap.drawn .hmhold.here .hmdot{stroke-width:3.4}
+.holdmap.drawn .hmrosering{fill:none;stroke:#5E4620;stroke-width:1.4;opacity:.65}
+.holdmap.drawn .hmrosering.in{opacity:.4}
+.holdmap.drawn .hmrosen{fill:#6B1414}
+.holdmap.drawn .hmrosex{fill:#5E4620;opacity:.68}
+.holdmap.drawn .hm-rosen{font-family:var(--display);font-size:17px;fill:#3A2208}
+.holdmap.drawn .hm-title{font-family:var(--display);font-size:25px;fill:#3A2208;letter-spacing:.03em}
+.holdmap.drawn .hmframe{fill:none;stroke:#5E4620}
+.holdmap.drawn .hmframe.out{stroke-width:2.6;opacity:.8}
+.holdmap.drawn .hmframe.in{stroke-width:1;opacity:.5}
+.holdmap.drawn .hmveil{fill:rgba(58,34,8,.46)}
+.holdmap.drawn.spotlit .hmhold:not(.here) .hmdot{opacity:.3}
 .hmcard{position:absolute;z-index:4;pointer-events:none;background:var(--paper);border:1px solid var(--ink);
   box-shadow:0 6px 18px rgba(24,12,4,.26);padding:8px 12px 9px;max-width:240px;line-height:1.35}
 .hmcard[hidden]{display:none}
@@ -2223,6 +2257,11 @@ body.lamplit[class*="hour-"]::after{background:transparent}
 .hmcard .hmcardseat{display:block;font-size:12px;font-style:italic;color:var(--sepia);margin-top:1px}
 .hmcard .hmcardnote{display:block;font-size:12.5px;color:var(--blood);margin-top:4px}
 .hmcard .hmcardnote[hidden]{display:none}
+@media (max-width:620px){
+  .holdmap.drawn .hm-name{font-size:34px}
+  .holdmap.drawn .hm-seat,.holdmap.drawn .hm-range,.holdmap.drawn .hm-water{font-size:17px}
+  .holdmap.drawn .hm-edge{font-size:18px}
+}
 .maplegend{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin:10px 2px 0;font-size:12.5px;color:var(--sepia)}
 .maplegend .sw{display:inline-block;width:22px;height:11px;border:1px solid #9B7B3E;vertical-align:-1px;margin-right:6px}
 .mapcredit{margin:6px 2px 0;font-size:11.5px;color:var(--sepia);opacity:.75}
@@ -2396,3 +2435,9 @@ svg.arms{display:inline-block;vertical-align:middle}
 .logdetail li{margin-bottom:3px}
 .codeblock{background:var(--parch-2);border:1px solid var(--line);padding:10px 12px;margin:0;overflow-x:auto;
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre;color:var(--ink)}
+.mapwrap.mapsmall{max-width:620px}
+.mapwrap.mapsmall .holdmap.drawn .hm-name{font-size:36px;stroke-width:7px}
+.mapwrap.mapsmall .holdmap.drawn .hm-seat{font-size:18px;stroke-width:5px}
+.mapwrap.mapsmall .holdmap.drawn .hm-range,.mapwrap.mapsmall .holdmap.drawn .hm-water{font-size:17px}
+.mapwrap.mapsmall .holdmap.drawn .hm-edge,.mapwrap.mapsmall .holdmap.drawn .hm-sea{font-size:19px}
+.mapwrap.mapsmall .holdmap.drawn .hm-title{font-size:30px}
