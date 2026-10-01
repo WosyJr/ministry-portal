@@ -94,6 +94,7 @@ app.use((req, res, next) => {
     const entered = req.session.entered; req.session.entered = null;
     // opts is spread first so an explicit flash that is undefined cannot wipe
     // the one waiting in the session after a redirect.
+    try { if (req.user && opts.active) require('./lib/tabuse').note(req.user.username, opts.active); } catch (_) {}
     res.status(status || 200).send(V.layout({ ...opts, user: req.user, csrf: req.session.csrf, flash: opts.flash || flash, today: res.locals.today, badges: b, siteGround: Settings.pageGround(), siteCursor: Settings.cursor(), entered, staffRoom: StaffRoom.mayEnter(req.user), desk: await deskFor(req.user), letter: tourVeil(req, opts) || letterVeil(req, opts) }));
   };
   res.say = (title, text, status) => res.page({ title, body: V.message(title, text) }, status);
