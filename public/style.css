@@ -2104,3 +2104,59 @@ a.jumpitem .jn{font-size:13px;opacity:.75}
 .jumphint{border-top:1px solid var(--parch-3);padding:7px 16px;font-size:13px;color:var(--sepia)}
 body.jumping{overflow:hidden}
 .ledger.tight td,.ledger.tight th{padding:5px 8px;font-size:14px}
+
+body.season-snow{--parch:#EFE7D4;--parch-2:#E5DCC3;--paper:#F5F1E2;--line:#B3A277}
+body.season-rain{--parch:#EFE6CC;--parch-2:#E6DCBA;--paper:#F5EEDA;--line:#B39C6A}
+body.season-sun{--parch:#F3E6C4;--parch-2:#EBDBAE;--paper:#F8EFD2;--line:#BE9E58}
+body.season-leaf{--parch:#F0E3C3;--parch-2:#E6D6AC;--paper:#F6EBD0;--line:#B8945A}
+
+body.season-snow .wrap > main,body.season-snow .card,body.season-snow .reqcard{box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}
+body.season-sun .mast h1{text-shadow:0 1px 0 rgba(255,246,222,.6)}
+
+html:has(body.season-snow){background:#EFE7D4}
+html:has(body.season-rain){background:#EFE6CC}
+html:has(body.season-sun){background:#F3E6C4}
+html:has(body.season-leaf){background:#F0E3C3}
+
+body.hour-dawn{--warm:rgba(255,196,150,.055)}
+body.hour-day{--warm:rgba(255,255,255,0)}
+body.hour-dusk{--warm:rgba(255,168,92,.075)}
+body.hour-night{--warm:rgba(58,74,124,.065)}
+body.hour-deep{--warm:rgba(44,60,110,.085)}
+
+body[class*="hour-"]::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
+  background:var(--warm,transparent);mix-blend-mode:multiply;transition:background 2.4s ease}
+body.hour-dusk .mast h1,body.hour-night .mast h1,body.hour-deep .mast h1{color:#7A1A18}
+body.hour-deep,body.hour-night{--gold:#8A6B36}
+
+body.lamplit[class*="hour-"]::after{background:transparent}
+@media (prefers-reduced-motion:reduce){body[class*="hour-"]::after{transition:none}}
+.tabs .moremenu a{flex:initial;border-bottom:0;white-space:normal;font-family:var(--body);padding:6px 16px}
+.tabs .moremenu a.on{border-bottom:0;background:var(--parch-2)}
+.tabs .moremenu a:hover{border-bottom:0}
+.rollcard .rollnow{margin:0 0 6px;font-size:17px}
+.rollpast{counter-reset:roll;margin:8px 0 0}
+.rollpast li{padding:7px 0;border-bottom:1px solid var(--parch-3)}
+.rollpast li:last-child{border-bottom:0}
+.deskrow{display:flex;align-items:stretch;gap:5px;margin-bottom:5px}
+.deskrow a.deskitem{flex:1 1 auto;margin-bottom:0}
+.deskdone button{height:100%;min-width:34px;background:var(--parch);border:1px solid var(--parch-3);
+  color:var(--gold);font-size:15px;cursor:pointer;border-radius:2px;line-height:1}
+.deskdone button:hover{border-color:var(--ok);color:var(--ok);background:var(--parch-2)}
+.deskgroup .dh{display:flex;align-items:baseline;gap:10px}
+.clearall{margin-left:auto}
+.clearall button{background:none;border:0;color:var(--sepia);font-family:var(--body);font-size:12px;
+  text-transform:none;letter-spacing:0;cursor:pointer;text-decoration:underline;padding:0}
+.clearall button:hover{color:var(--blood)}
+.tourveil{background:rgba(43,27,14,.52);display:block}
+.tourspot{position:fixed;border-radius:3px;box-shadow:0 0 0 9999px rgba(43,27,14,.52),0 0 0 2px var(--gold-soft) inset;
+  outline:2px solid var(--blood);outline-offset:1px;pointer-events:none;z-index:1;transition:all .3s cubic-bezier(.3,.8,.35,1)}
+.tourveil{overflow-y:auto}
+.tourveil .tourcard{position:relative;z-index:3;max-width:430px;margin:12vh auto 0;opacity:1;
+  transition:top .3s ease,left .3s ease}
+.tourveil .tourcard.placed{position:fixed;margin:0}
+.tourskip{background:none;border:0;color:var(--sepia);font-family:var(--body);font-size:13px;text-decoration:underline;cursor:pointer;padding:0}
+.tourskip:hover{color:var(--blood)}
+.tbar{flex:1 1 auto;height:3px;background:var(--parch-3);margin-left:8px;display:block;min-width:50px}
+.tbar span{display:block;height:100%;background:var(--blood);transition:width .3s ease}
+.tourout{margin:10px 0 0!important;font-size:13px;color:var(--sepia)}
