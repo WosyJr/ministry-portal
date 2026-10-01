@@ -177,6 +177,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       if (d) { prev = d.body; opts = { ...opts, draftId: d.id, hold: d.body.hold || '', linked: d.body.linked || '', checks: d.body.check || {} }; }
     }
     const flash = G.connected() ? null : { err: true, text: 'The Ministry archives are not connected to Google yet, so this writ cannot be sealed. You may still keep it as a draft or practice it.' };
+    opts.plain = (U.view(req.user.username).prefs || {}).plain !== false;
     res.page({ title: f.title, active: 'forms', body: SV.formPage(f, req.user, req.session.csrf, prev, opts), flash });
   });
 
@@ -847,7 +848,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     const rows = await Records.visible(req.user) || [];
     await sweepWeeks(rows);
     const list = Quota.standing(rows, Records.meta);
-    res.page({ title: 'The Delegates', active: 'delegates', body: QV.standingPage(req.user, list, Quota.settings(), req.session.csrf, Quota.weekKey(new Date())) });
+    res.page({ title: 'The Delegates', active: 'delegates', body: QV.standingPage(req.user, list, Quota.settings(), req.session.csrf, Quota.weekKey(new Date()), Quota.startWeek()) });
   }));
 
   r.post('/delegates/settings', need('officers'), checkCsrf, (req, res) => {
@@ -855,6 +856,26 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     Quota.setSettings({ rounds: b.rounds, paper: !!b.paper, duty: !!b.duty, duties: b.duties });
     Activity.log(req.user, 'set what a week asks of a Delegate', '');
     req.session.flash = { text: 'The week is set down.' };
+    res.redirect('/staff/delegates');
+  });
+
+  r.post('/delegates/start', need('officers'), checkCsrf, (req, res) => {
+    const wk = String(req.body.week || '');
+    const n = Quota.startFrom(wk);
+    Activity.log(req.user, 'set where the Delegates\u2019 record begins', wk);
+    req.session.flash = { text: wk ? `The record begins at ${Quota.weekLabel(wk)}. ${n} earlier week${n === 1 ? '' : 's'} struck.` : 'Every week is counted again.' };
+    res.redirect('/staff/delegates');
+  });
+
+  r.post('/delegates/:username/week', need('officers'), checkCsrf, (req, res) => {
+    const who = String(req.params.username);
+    const t = U.view(who);
+    const wk = String(req.body.week || '');
+    if (!t || !wk) { req.session.flash = { err: true, text: 'Nothing answers to that.' }; return res.redirect('/staff/delegates'); }
+    const met = !!String(req.body.met || '');
+    Quota.setWeek(who, wk, met, req.user);
+    Activity.log(req.user, met ? 'set a week as met' : 'set a week as short', '', t.name);
+    req.session.flash = { text: `${t.name}: the week of ${Quota.weekLabel(wk)} is set down as ${met ? 'met' : 'short'}.` };
     res.redirect('/staff/delegates');
   });
 
@@ -896,6 +917,12 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
 
   r.get('/profile', (req, res) => res.page({ title: 'Profile', body: SV.profile(req.user, U.view(req.user.username), req.session.csrf) }));
   r.get('/id-card', (req, res) => res.send(V.idCardPrint(U.view(req.user.username), '/seal/minister', res.locals.today)));
+  r.post('/profile/settings', checkCsrf, (req, res) => {
+    U.update(req.user.username, { prefs: { plain: !!req.body.plain, glossary: !!req.body.glossary } });
+    req.session.flash = { text: 'Saved. The hall will behave that way for you from now on.' };
+    res.redirect('/staff/profile');
+  });
+
   r.post('/profile', checkCsrf, (req, res) => {
     const u = req.user;
     try {
