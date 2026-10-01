@@ -1989,3 +1989,81 @@ body.arcane .readcard{border-left:3px solid var(--arc)}
 body.arcane .readcard .no{font-size:13px}
 .ticketmeta code{font-size:13px}
 body.arcane .ticketmeta a{color:var(--arc);word-break:break-all}
+.field .say,p.say{display:block;font-size:15px;color:var(--sepia);margin:1px 0 5px;line-height:1.45}
+.say.inline{display:inline;font-size:14px}
+.opts label .say.inline{color:var(--sepia)}
+input::placeholder,textarea::placeholder{color:var(--gold);opacity:1}
+.weeklist{margin:6px 0 14px}
+.weeklist li.weekline{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--parch-3)}
+.weeklist li.weekline:last-child{border-bottom:0}
+.weeklist .weekmark{flex:0 0 96px}
+.weeklist .weekbody{flex:1 1 auto;display:flex;flex-direction:column;gap:1px}
+.weeklist .weekbody .small{color:var(--sepia);font-size:14px}
+.weeklist .weekbody .dim{opacity:.72;font-style:italic}
+.weeklist.tight li.weekline{padding:7px 0}
+.deskbtn{display:inline-flex;align-items:center;gap:7px;font-family:var(--body);font-size:15px;color:#FFF6E6;
+  background:var(--blood);border:1px solid #52100F;padding:6px 12px;border-radius:2px;cursor:pointer;line-height:1.3}
+.deskbtn:hover{background:var(--blood-2)}
+.deskbtn .badge{background:var(--parch);color:var(--blood);border-radius:9px;padding:0 7px;font-weight:700;font-size:13px}
+.deskbtn.urgent{animation:desknudge 2.4s ease-in-out 3}
+@keyframes desknudge{0%,92%,100%{transform:none}94%{transform:translateY(-2px)}96%{transform:translateY(1px)}98%{transform:translateY(-1px)}}
+.deskpanel{position:fixed;top:48px;right:14px;width:min(420px,calc(100vw - 28px));max-height:min(74vh,720px);
+  background:var(--paper);border:1px solid var(--gold);border-top:3px solid var(--blood);
+  box-shadow:0 14px 40px rgba(43,27,14,.3);z-index:80;display:flex;flex-direction:column;
+  animation:deskdrop .18s cubic-bezier(.3,.8,.35,1)}
+@keyframes deskdrop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.deskhead{display:flex;align-items:baseline;gap:10px;padding:12px 16px 10px;border-bottom:1px solid var(--line)}
+.deskhead b{font-family:var(--display);font-weight:400;color:var(--blood);font-size:20px}
+.deskhead span{font-size:13px;color:var(--sepia)}
+.deskclose{margin-left:auto;background:none;border:none;color:var(--sepia);font-size:17px;cursor:pointer;line-height:1;padding:0 2px}
+.deskclose:hover{color:var(--blood)}
+.deskbody{overflow-y:auto;padding:4px 0 6px}
+.deskgroup{padding:8px 16px 2px}
+.deskgroup .dh{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:6px}
+a.deskitem{display:block;text-decoration:none;color:var(--ink);padding:8px 10px;margin-bottom:5px;
+  background:var(--parch);border:1px solid var(--parch-3);border-left:3px solid var(--line)}
+a.deskitem:hover{border-left-color:var(--blood);background:var(--parch-2)}
+a.deskitem.urgent{border-color:var(--blood);border-left-width:4px}
+a.deskitem .dt{display:block;font-weight:600;font-size:15px}
+a.deskitem .dn{display:block;font-size:14px;color:var(--sepia)}
+.deskempty{padding:18px 16px;color:var(--sepia);font-style:italic;margin:0}
+.deskfoot{border-top:1px solid var(--line);padding:9px 16px;font-size:14px}
+body.desk-open{overflow:hidden}
+@media (max-width:620px){.deskpanel{top:auto;bottom:0;right:0;left:0;width:auto;max-height:80vh}}
+.letterveil{position:fixed;inset:0;background:rgba(43,27,14,.52);z-index:200;display:flex;align-items:flex-start;
+  justify-content:center;padding:40px 16px;overflow-y:auto;animation:veilin .2s ease}
+@keyframes veilin{from{opacity:0}to{opacity:1}}
+.letterveil .letter{max-width:720px;width:100%;margin:0 auto}
+article.letter{background:var(--paper);border:1px solid var(--gold);border-top:5px solid var(--blood);
+  padding:24px 36px 22px;position:relative;box-shadow:0 18px 50px rgba(27,16,6,.3)}
+article.letter.sealed{animation:letterin .26s cubic-bezier(.3,.8,.35,1)}
+@keyframes letterin{from{opacity:0;transform:translateY(-14px) scale(.985)}to{opacity:1;transform:none}}
+.letterwax{position:absolute;right:26px;top:18px;width:58px;height:58px;border-radius:50%;
+  background:radial-gradient(circle at 38% 34%,#A52828,#6B1414 62%,#4E0E0E);
+  box-shadow:0 3px 7px rgba(43,27,14,.4);display:flex;align-items:center;justify-content:center}
+.letterhead{text-align:center;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.letterhead h2{margin:8px 0 4px}
+.letterfoot{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+  background:var(--parch-2);border-top:1px solid var(--line);margin:16px -36px -22px;padding:13px 36px}
+body.veiled{overflow:hidden}
+.lettertargets{display:block;max-height:190px;overflow-y:auto;border:1px solid var(--line);background:#FBF5E6;padding:8px 10px}
+.tourveil{position:fixed;inset:0;background:rgba(43,27,14,.46);z-index:210;display:flex;align-items:center;justify-content:center;padding:24px 16px;animation:veilin .2s ease}
+.tourcard{background:var(--paper);border:1px solid var(--gold);border-top:4px solid var(--blood);max-width:470px;width:100%;padding:20px 24px 18px;box-shadow:0 18px 44px rgba(27,16,6,.4)}
+.tourtop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.tourtop .small{font-size:13px;color:var(--sepia)}
+.tourcard h3{margin:0 0 8px}
+.tourcard p{margin:0 0 16px;font-size:16px}
+.tourfoot{display:flex;gap:8px;align-items:center}
+.tdots{margin-left:auto;display:flex;gap:5px}
+.tdot{width:8px;height:8px;border-radius:50%;background:var(--parch-3)}
+.tdot.on{background:var(--blood)}
+.guidecard{border-left:3px solid var(--blood)}
+.dimcard{background:var(--parch-2)}
+.footlist li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--parch-3)}
+.footlist li:last-child{border-bottom:0}
+.footlist .tick{flex:0 0 auto;margin-top:2px}
+.footlist .box{display:inline-block;width:17px;height:17px;border:2px solid var(--gold)}
+.footlist li.done{color:var(--sepia)}
+.glossary dt{font-weight:600;margin-top:7px}
+.glossary dd{margin:0 0 2px;color:var(--sepia);font-size:15px}
+abbr.term{text-decoration:none;border-bottom:2px dotted var(--blood);cursor:help}
