@@ -16,6 +16,7 @@ const Ranks = require('./lib/ranks');
 const Desk = require('./lib/desk');
 const Quota = require('./lib/quota');
 const Letters = require('./lib/letters');
+const Lapse = require('./lib/lapse');
 const LV = require('./lib/lettersviews');
 const Guide = require('./lib/guide');
 const GV = require('./lib/guideviews');
@@ -47,20 +48,23 @@ async function badges(u) {
 function tourVeil(req, opts) {
   try {
     if (!req.user || opts.noVeil || !A.isStaff(req.user)) return '';
+    if (req.user.mustChange) return '';
+    if (String(req.originalUrl || '').indexOf('/account/password') === 0) return '';
     if (Guide.hasSeenTour(req.user)) return '';
-    if (String(req.originalUrl || '').indexOf('/staff/guide') === 0) return '';
-    return GV.tourOverlay(req.user, req.session.csrf, req.originalUrl || '/staff');
+    const n = Number.isFinite(Number(req.session.tourStep)) && req.session.tourStep !== null ? Number(req.session.tourStep) : 0;
+    return GV.tourOverlay(req.user, req.session.csrf, req.originalUrl || '/staff', n);
   } catch (_) { return ''; }
 }
 
 function letterVeil(req, opts) {
   try {
-    if (!req.user || opts.noVeil) return '';
-    const l = Letters.nextFor(req.user);
-    if (!l) return '';
-    if (String(req.originalUrl || '').indexOf('/staff/letters/') === 0) return '';
+    if (!req.user || opts.noVeil || req.user.mustChange) return '';
+    const queue = Letters.mustFor(req.user);
+    if (!queue.length) return '';
+    const l = queue[0];
+    if (String(req.originalUrl || '').indexOf('/staff/letters') === 0) return '';
     Letters.markSeen(l.id, req.user);
-    return LV.overlay(l, req.session.csrf, req.originalUrl || '/staff');
+    return LV.overlay(l, req.session.csrf, req.originalUrl || '/staff', queue.length);
   } catch (_) { return ''; }
 }
 
@@ -75,7 +79,9 @@ async function deskFor(u) {
   } catch (_) {}
   let letters = [];
   try { letters = Letters.waitingFor(u); } catch (_) {}
-  try { return Desk.gather(u, rows, { week, letters }); } catch (_) { return null; }
+  let due = [];
+  try { due = Lapse.comingDue(rows, Records.meta, u); } catch (_) {}
+  try { return Desk.gather(u, rows, { week, letters, due }); } catch (_) { return null; }
 }
 
 app.use((req, res, next) => {
@@ -91,6 +97,10 @@ app.use((req, res, next) => {
   res.page = async (opts, status) => {
     const flash = req.session.flash; req.session.flash = null;
     const b = await badges(req.user);
+    if (!opts.flash && req.user && Records.readingFromVault()) {
+      const v = Records.Vault.state();
+      opts.flash = { err: true, html: 'The Ministry archives cannot be reached. You are reading the <b>last copy kept here</b>' + (v.at ? ', taken ' + new Date(v.at).toLocaleString('en-GB') : '') + '. Nothing can be filed or sealed until Google answers again.' };
+    }
     const entered = req.session.entered; req.session.entered = null;
     // opts is spread first so an explicit flash that is undefined cannot wipe
     // the one waiting in the session after a redirect.
