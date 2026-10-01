@@ -302,17 +302,105 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.page({ title: 'Ledger of Laws', active: 'laws', body: V.laws(Settings.laws(), directives) });
   }));
 
+  const Discord = require('../lib/discord');
+
+  function enterHall(req, user, to) {
+    req.session.csrf = crypto.randomBytes(18).toString('hex');
+    req.session.username = user.username;
+    req.session.entered = true;
+    Activity.log(user, 'entered the hall');
+    const safe = to && to.startsWith('/') && !to.startsWith('//') ? to : null;
+    return safe || A.homeFor(U.sessionUser(user.username));
+  }
+
+  app.get('/auth/discord/login', (req, res) => {
+    if (!Discord.configured()) return res.say('Discord is not set up', 'The Ministry has not been given its Discord keys yet. Enter by name and password.', 503);
+    if (A.isStaff(req.user)) return res.redirect(A.homeFor(req.user));
+    const state = Discord.newState();
+    req.session.dstate = state;
+    req.session.dmode = 'login';
+    req.session.dto = String(req.query.to || req.session.returnTo || '');
+    res.redirect(Discord.authUrl(state, req));
+  });
+
+  app.get('/auth/discord/link', A.requireStaff, (req, res) => {
+    if (!Discord.configured()) return res.say('Discord is not set up', 'The Ministry has not been given its Discord keys yet.', 503);
+    const state = Discord.newState();
+    req.session.dstate = state;
+    req.session.dmode = 'link';
+    req.session.dwho = req.user.username;
+    res.redirect(Discord.authUrl(state, req));
+  });
+
+  app.get('/auth/discord/callback', wrap(async (req, res) => {
+    const state = req.session.dstate;
+    const mode = req.session.dmode;
+    const who = req.session.dwho;
+    const to = req.session.dto || '';
+    req.session.dstate = null; req.session.dmode = null; req.session.dwho = null; req.session.dto = null;
+
+    if (req.query.error) {
+      req.session.flash = { err: true, text: 'Discord was not given leave, so nothing was changed.' };
+      return res.redirect(mode === 'link' ? '/staff/profile' : '/login');
+    }
+    if (!state || !req.query.state || String(req.query.state) !== state) {
+      return res.say('That did not come back from Discord', 'The reply did not match what the hall sent out. Start again from the beginning.', 400);
+    }
+    if (!Discord.configured()) return res.say('Discord is not set up', 'The Ministry has not been given its Discord keys yet.', 503);
+
+    let profile, token;
+    try {
+      token = await Discord.exchange(String(req.query.code || ''), req);
+      profile = await Discord.me(token);
+    } catch (e) {
+      req.session.flash = { err: true, text: e.message };
+      return res.redirect(mode === 'link' ? '/staff/profile' : '/login');
+    }
+    Discord.revoke(token);
+
+    if (mode === 'link') {
+      if (!who || !req.user || req.user.username !== who) {
+        req.session.flash = { err: true, text: 'You are no longer the officer who began that. Nothing was changed.' };
+        return res.redirect('/staff/profile');
+      }
+      try {
+        U.linkDiscord(who, profile);
+        Activity.log(req.user, 'linked their Discord', '');
+        req.session.flash = { text: `Your Discord is linked as ${profile.name}. You can enter the hall with it from now on.` };
+      } catch (e) {
+        req.session.flash = { err: true, text: e.message };
+      }
+      return res.redirect('/staff/profile');
+    }
+
+    const found = U.findByDiscord(profile.id);
+    if (!found) {
+      req.session.flash = { err: true, text: 'No officer on the rolls has that Discord set against their name. Enter by name and password once, then link it from your Profile.' };
+      return res.redirect('/login');
+    }
+    if (found.active === false) {
+      req.session.flash = { err: true, text: 'That officer is no longer upon the rolls.' };
+      return res.redirect('/login');
+    }
+    const user = U.view(found.username);
+    const key = (req.ip || '') + '|discord|' + profile.id;
+    A.succeeded(key);
+    const dest = enterHall(req, user, to);
+    if (U.sessionUser(found.username).mustChange) return res.redirect('/account/password');
+    res.redirect(dest);
+  }));
+
   app.get('/login', (req, res) => {
     if (A.isStaff(req.user)) return res.redirect('/staff');
-    res.page({ title: 'Staff Entrance', body: V.loginPage(req.session.csrf) });
+    res.page({ title: 'Staff Entrance', body: V.loginPage(req.session.csrf, '', '', { discord: Discord.configured(), to: String(req.query.to || '') }) });
   });
   app.post('/login', checkCsrf, (req, res) => {
     const username = String(req.body.username || '').slice(0, 40);
     const key = (req.ip || '') + '|' + username.toLowerCase();
     const wait = A.throttled(key);
-    if (wait) return res.page({ title: 'Staff Entrance', body: V.loginPage(req.session.csrf, `Too many attempts. Wait ${wait} seconds and try again.`, username) }, 429);
+    if (wait) return res.page({ title: 'Staff Entrance', body: V.loginPage(req.session.csrf, `Too many attempts. Wait ${wait} seconds and try again.`, username, { discord: Discord.configured() }) }, 429);
     const user = U.authenticate(username, String(req.body.password || ''));
-    if (!user) { A.failed(key); return res.page({ title: 'Staff Entrance', body: V.loginPage(req.session.csrf, 'That name and password do not match the rolls.', username) }, 401); }
+    if (!user) { A.failed(key); return res.page({ title: 'Staff Entrance', body: V.loginPage(req.session.csrf, 'That name and password do not match the rolls.', username, { discord: Discord.configured() }) }, 401); }
     A.succeeded(key);
     const to = req.session.returnTo || String(req.body.to || ''); req.session.returnTo = null;
     req.session.csrf = crypto.randomBytes(18).toString('hex');

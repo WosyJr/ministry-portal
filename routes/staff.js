@@ -1037,6 +1037,10 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   r.get('/profile', (req, res) => {
     const me = U.view(req.user.username) || {};
     me.oath = require('../lib/ceremony').taken(req.user.username);
+    const Disc = require('../lib/discord');
+    me.discordReady = Disc.configured();
+    me.discord = U.discordOf(req.user.username);
+    me.discordAvatar = me.discord ? Disc.avatarUrl(me.discord, 96) : '';
     res.page({ title: 'Profile', ...branchFlags(req.user), body: SV.profile(req.user, me, req.session.csrf) });
   });
 

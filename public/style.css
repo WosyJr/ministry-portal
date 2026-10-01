@@ -2201,15 +2201,28 @@ body.lamplit[class*="hour-"]::after{background:transparent}
 .weekline.byhand{background:rgba(184,154,98,.14);border-radius:4px}
 .weekline.byhand .weekbody .dim{font-style:italic}
 
+.holdmapwrap{position:relative}
 .holdmap.sheet{width:100%;height:auto;display:block}
-.holdmap.sheet image{image-rendering:auto}
-.holdmap.sheet .hmland{fill:#6B1414;fill-opacity:var(--load,0);stroke:#6B1414;stroke-width:0;stroke-opacity:0;
-  mix-blend-mode:multiply;transition:fill-opacity .16s ease,stroke-width .16s ease,stroke-opacity .16s ease}
-.holdmap.sheet .hmhold:hover .hmland,.holdmap.sheet .hmhold:focus .hmland{fill-opacity:.2;stroke-width:2.4;stroke-opacity:.7}
-.holdmap.sheet .hmhold.here .hmland{fill-opacity:.2;stroke-width:2.4;stroke-opacity:.8}
-.holdmap.sheet .hmhold{outline:none}
-.holdmap.sheet .hmbadge circle{fill:#6B1414;stroke:#F1E6CC;stroke-width:2}
-.holdmap.sheet .hmbadge text{fill:#F6EEDA;font-family:var(--body);font-size:15px;font-weight:600}
+.holdmap.sheet .hmhit{fill:transparent;stroke:none}
+.holdmap.sheet .hmhold{cursor:pointer;outline:none}
+.holdmap.sheet .hmpin{pointer-events:none}
+.holdmap.sheet .hmhalo{fill:rgba(107,20,20,0);transition:fill .18s ease}
+.holdmap.sheet .hmdot{fill:#EFE4C6;stroke:#6E5126;stroke-width:1.6;transition:stroke .18s ease,stroke-width .18s ease}
+.holdmap.sheet .busy .hmdot{fill:#6B1414;stroke:#F1E6CC;stroke-width:2}
+.holdmap.sheet .hmpin text{fill:#F6EEDA;font-family:var(--body);font-size:15px;font-weight:600}
+.holdmap.sheet .hmhold:hover .hmhalo,.holdmap.sheet .hmhold:focus .hmhalo,.holdmap.sheet .hmhold.here .hmhalo{fill:rgba(107,20,20,.22)}
+.holdmap.sheet .hmhold:hover .hmdot,.holdmap.sheet .hmhold:focus .hmdot{stroke:#6B1414;stroke-width:2.6}
+.holdmap.sheet .hmhold.here .hmdot{fill:#6B1414;stroke:#F1E6CC;stroke-width:2.6}
+.holdmap.sheet .hmhold.here .hmhalo{fill:rgba(107,20,20,.3)}
+.hmcard{position:absolute;z-index:4;pointer-events:none;background:var(--paper);border:1px solid var(--ink);
+  box-shadow:0 6px 18px rgba(24,12,4,.26);padding:8px 12px 9px;max-width:240px;line-height:1.35}
+.hmcard[hidden]{display:none}
+.hmcard::after{content:"";position:absolute;left:50%;bottom:-6px;width:10px;height:10px;margin-left:-5px;
+  background:var(--paper);border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);transform:rotate(45deg)}
+.hmcard b{display:block;font-family:var(--display);font-size:17px;color:var(--ink);line-height:1.15}
+.hmcard .hmcardseat{display:block;font-size:12px;font-style:italic;color:var(--sepia);margin-top:1px}
+.hmcard .hmcardnote{display:block;font-size:12.5px;color:var(--blood);margin-top:4px}
+.hmcard .hmcardnote[hidden]{display:none}
 .maplegend{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin:10px 2px 0;font-size:12.5px;color:var(--sepia)}
 .maplegend .sw{display:inline-block;width:22px;height:11px;border:1px solid #9B7B3E;vertical-align:-1px;margin-right:6px}
 .mapcredit{margin:6px 2px 0;font-size:11.5px;color:var(--sepia);opacity:.75}
@@ -2334,3 +2347,36 @@ svg.arms{display:inline-block;vertical-align:middle}
 .armsget{border-top:1px solid var(--line);margin-top:16px;padding-top:14px;text-align:left}
 .armsget .linkrow{margin:6px 0 0;gap:6px}
 .armsget .hint{margin:8px 0 0}
+.maplegend .pin{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;
+  border-radius:50%;margin-right:7px;vertical-align:-6px;font-size:12px;font-weight:600}
+.maplegend .pin.hollow{background:#EFE4C6;border:1.6px solid #6E5126}
+.maplegend .pin.full{background:#6B1414;color:#F6EEDA;border:2px solid #F1E6CC}
+
+.entryways{margin:0 0 18px}
+.discordbtn{display:inline-flex;align-items:center;gap:9px;background:#4E5A96;border-color:#3B4677;color:#F3F1FA}
+.discordbtn:hover{background:#3F4A80;color:#fff}
+.orline{display:flex;align-items:center;gap:12px;margin:18px 0 4px;color:var(--sepia);font-size:12px;
+  letter-spacing:.18em;text-transform:uppercase}
+.orline::before,.orline::after{content:"";flex:1;height:0;border-top:1px solid var(--line)}
+.discordcard{display:flex;gap:12px;align-items:flex-start}
+.discordcard img{flex:none;border-radius:50%;border:1px solid var(--line)}
+.discordname{font-family:var(--display);font-size:18px;color:var(--ink);line-height:1.2}
+.discordtag{font-size:12.5px;color:var(--sepia)}
+
+.term{border-bottom:1px dotted var(--gold);cursor:help;position:relative;white-space:nowrap;
+  padding-bottom:1px;transition:border-color .14s ease,color .14s ease}
+.term:hover,.term.on,.term:focus{border-bottom-color:var(--blood);color:var(--blood);outline:none}
+.term:focus-visible{outline:2px solid var(--blood);outline-offset:2px}
+.termq{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;margin-left:3px;
+  border:1px solid var(--gold);border-radius:50%;font-family:var(--body);font-size:9.5px;font-weight:600;
+  line-height:1;color:var(--gold);vertical-align:super;background:transparent;
+  transition:background .14s ease,color .14s ease,border-color .14s ease}
+.term:hover .termq,.term.on .termq,.term:focus .termq{background:var(--blood);border-color:var(--blood);color:#F6EEDA}
+.termtip{position:absolute;z-index:60;background:var(--ink);color:#F3E7CC;font-family:var(--body);
+  font-size:13.5px;line-height:1.5;padding:9px 12px;border-radius:3px;box-shadow:0 8px 22px rgba(24,12,4,.4);
+  pointer-events:none;max-width:300px}
+.termtip[hidden]{display:none}
+.termtip::after{content:"";position:absolute;left:var(--ax,50%);bottom:-5px;margin-left:-5px;
+  width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--ink)}
+.termtip.below::after{bottom:auto;top:-5px;border-top:0;border-bottom:5px solid var(--ink)}
+@media print{.term{border-bottom:0}.termq,.termtip{display:none!important}}
