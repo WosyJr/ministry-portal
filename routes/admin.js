@@ -118,14 +118,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
         req.session.flash = { text: 'Updated ' + t.name + '.' };
         Activity.log(req.user, 'updated an officer', '', t.name);
       }
-      else if (act === 'unlink-discord') {
-        if (!req.user.all) throw new Error('Only the Minister may unlink a Discord.');
-        const was = U.unlinkDiscord(who);
-        req.session.flash = was
-          ? { text: `${t.name} is no longer linked to Discord (${was.name || was.username}). They enter by name and password until they link it again.` }
-          : { err: true, text: `${t.name} has no Discord linked.` };
-        if (was) Activity.log(req.user, 'unlinked a Discord', '', t.name);
-      }
       else if (act === 'remove') { if (who === req.user.username) throw new Error('You cannot strike your own name from the rolls.'); U.remove(who); req.session.flash = { text: 'Removed ' + t.name + ' from the rolls.' }; Activity.log(req.user, 'removed an officer', '', t.name); }
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
     res.redirect('/admin');
