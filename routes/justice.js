@@ -20,7 +20,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   const needJudge = (req, res, next) => mayJudge(req.user) ? next() : next('forbidden');
   const needComplaints = (req, res, next) => mayComplaints(req.user) ? next() : next('forbidden');
   const needInquire = (req, res, next) => mayInquire(req.user) ? next() : next('forbidden');
-  const needMinister = (req, res, next) => (req.user && req.user.all) ? next() : next('forbidden');
+  const needMinister = (req, res, next) => J.inqSeesAll(req.user) ? next() : next('forbidden');
   const needAdmin = (req, res, next) => {
     if (!req.user) { req.session.returnTo = req.originalUrl; return res.redirect('/justice/entrance'); }
     return isAdmin(req.user) ? next() : next('forbidden');
@@ -29,8 +29,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
   const jusRanks = () => Ranks.all().filter(r => Ranks.branchOf(r) === 'justice');
   const jusRankIds = () => new Set(jusRanks().map(r => r.id));
   const jusOfficers = () => { const ids = jusRankIds(); return U.list().filter(o => ids.has(o.rank)); };
-  // No one may appoint above themselves: a rank is theirs to give only if they
-  // already hold every power it carries.
   const giveable = u => u.all ? jusRanks() : jusRanks().filter(r => (r.perms || []).every(p => (u.perms || []).includes(p)));
   const benchOfficers = () => jusOfficers().filter(o => o.active !== false);
 
@@ -246,7 +244,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   }));
 
   app.get('/justice/desk', seeCases, needInquire, wrap(async (req, res) => {
-    const mine = req.user.all
+    const mine = J.inqSeesAll(req.user)
       ? J.inquisitions()
       : J.inquisitions().filter(i => J.inqAssigned(i).includes(String(req.user.username).toLowerCase()));
     page(res, req, 'My Desk', JV.deskPage(req.user, mine.slice().reverse()));
@@ -285,7 +283,10 @@ module.exports = (app, { checkCsrf, wrap }) => {
   app.get('/justice/inquisitions/:id', seeCases, wrap(async (req, res) => {
     const i = req.inq || J.inqGet(String(req.params.id));
     if (!i) return res.say('No such inquisition', 'No inquisition answers to that.', 404);
-    const assign = (req.user && req.user.all) ? inqOfficers() : null;
+    const held = J.inqAssigned(i);
+    const base = inqOfficers();
+    const strays = U.list().filter(o => held.includes(String(o.username || '').toLowerCase()) && !base.some(b => b.username === o.username));
+    const assign = J.inqSeesAll(req.user) ? base.concat(strays) : null;
     const bench = benchOfficers();
     const me = req.user && !bench.some(o => o.username === req.user.username)
       ? [{ username: req.user.username, name: req.user.name, rankName: req.user.rankName || '' }] : [];
@@ -315,14 +316,21 @@ module.exports = (app, { checkCsrf, wrap }) => {
     catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
-  // The commission is the Minister's own writ, so only those who may open an
-  // inquisition may issue one, and the paper itself is readable by any officer
-  // who may see the inquisition it belongs to.
   app.post('/justice/inquisitions/:id/commission', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
     const id = String(req.params.id);
     try {
       const i = J.inqCommission(id, req.body || {}, req.user);
-      backInq(req, res, id, `${i.commission.no} is issued to ${i.commission.inquisitors}.`);
+      const g = i.granted || [];
+      const d = i.dropped || [];
+      const list2 = a => a.length === 1 ? a[0] : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+      let tail = g.length
+        ? ` ${list2(g)} ${g.length === 1 ? 'is' : 'are'} now assigned to it and may see it.`
+        : i.unmatched
+          ? ' No officer of the roll answers to the name written there, so nobody was given sight of it. Use the buttons above the field, or set who may see it by hand.'
+          : ' Those named already had sight of it.';
+      if (d.length) tail += ` ${list2(d)} ${d.length === 1 ? 'is no longer named upon the writ and no longer sees it' : 'are no longer named upon the writ and no longer see it'}.`;
+      Activity.log(req.user, 'issued a commission', i.commission.no, i.commission.inquisitors);
+      backInq(req, res, id, `${i.commission.no} is issued to ${i.commission.inquisitors}.${tail}`);
     } catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
@@ -334,8 +342,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     } catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
-  // Article 3. Modify, restrict, suspend or terminate are four different things,
-  // and the register says which was done rather than merely that it is off.
   app.post('/justice/inquisitions/:id/commission/state', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
     const id = String(req.params.id);
     try {
@@ -352,14 +358,12 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.send(JV.commissionDoc(i));
   }));
 
-  // Article 11. What the Hold was told, or the ground upon which it was not.
   app.post('/justice/inquisitions/:id/notice', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
     const id = String(req.params.id);
     try { J.inqNotice(id, req.body || {}, req.user); backInq(req, res, id, 'The notice is entered.'); }
     catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
-  // Article 3. An extension of the subject matter, and the ground that carries it.
   app.post('/justice/inquisitions/:id/extend', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
     const id = String(req.params.id);
     try {
@@ -369,7 +373,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     } catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
-  // Articles 19 and 20. What was done before authority could be had.
   app.post('/justice/inquisitions/:id/emergency', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
     const id = String(req.params.id);
     try {
@@ -379,21 +382,18 @@ module.exports = (app, { checkCsrf, wrap }) => {
     } catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
-  // Articles 21 to 23. The help of another authority is asked for, not ordered.
   app.post('/justice/inquisitions/:id/assist', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
     const id = String(req.params.id);
     try { J.inqAssist(id, req.body || {}, req.user); backInq(req, res, id, 'The request is set down.'); }
     catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
-  // Article 25. Obstruction, once all three limbs are shown and not before.
   app.post('/justice/inquisitions/:id/obstruction', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
     const id = String(req.params.id);
     try { J.inqObstruction(id, req.body || {}, req.user); backInq(req, res, id, 'It is set down.'); }
     catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
-  // Article 26. The report.
   app.post('/justice/inquisitions/:id/report', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
     const id = String(req.params.id);
     try {
@@ -410,9 +410,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.send(JV.inqReportDoc(i));
   }));
 
-  // Article 27. The Minister's answer upon the report. It is the Minister's to
-  // give, not the Inquisitor's, so it is gated to those who may judge or to the
-  // Minister themselves rather than to whoever may open an inquisition.
   app.post('/justice/inquisitions/:id/review', seeCases, checkCsrf, wrap(async (req, res, next) => {
     if (!mayJudge(req.user) && !isAdmin(req.user)) return next('forbidden');
     const id = String(req.params.id);
@@ -453,10 +450,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/justice/inquisitions');
   }));
 
-  // ---- Article 28: complaints against an Inquisitor ----
-  // The form is open to any person, named or not. The register is not: a
-  // half-examined complaint against a named officer is not public reading.
-
   app.get('/justice/complaints/lay', wrap(async (req, res) => {
     page(res, req, 'Complain of an Inquisitor', JV.complaintLayBox(req.user, req.session.csrf, null, ''));
   }));
@@ -486,8 +479,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/justice/complaints');
   }));
 
-  // Only the Minister, or an officer who may judge, answers upon a complaint:
-  // an Inquisitor does not examine a complaint against an Inquisitor.
   app.post('/justice/complaints/:id', seeCases, checkCsrf, wrap(async (req, res, next) => {
     if (!mayJudge(req.user) && !isAdmin(req.user)) return next('forbidden');
     try {
@@ -526,7 +517,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     if (m) { J.matterRemove(m.id); req.session.flash = { text: `${m.no} is struck.` }; }
     res.redirect('/justice/matters');
   }));
-
 
   app.post('/justice/cases/:id/plea', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
     const id = String(req.params.id);
@@ -568,8 +558,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     sendDoc(res, JV.witnessSummonsDoc(c, w));
   }));
 
-  // ---- Documents that may be given out ----
-
   const sendDoc = (res, html) => { res.set('Content-Type', 'text/html; charset=utf-8'); res.send(html); };
 
   app.get('/justice/warrants/:id/doc', seeCases, wrap(async (req, res) => {
@@ -596,7 +584,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     if (!x) return res.status(404).send('No such entry upon the register.');
     sendDoc(res, JV.custodyDoc(x));
   }));
-
 
   app.get('/justice/exhibits/:id/doc', seeCases, wrap(async (req, res) => {
     const e = J.exhibitGet(String(req.params.id));
@@ -627,9 +614,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     if (!m) return res.status(404).send('No matter stands under that number.');
     sendDoc(res, JV.matterDoc(m));
   }));
-
-
-  // ---- Public: verify a paper, persons sought, the calendar ----
 
   app.get('/justice/verify', wrap(async (req, res) => {
     const code = String(req.query.code || '').slice(0, 12);
@@ -665,8 +649,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/justice/courts');
   }));
 
-  // ---- Evidence and exhibits ----
-
   app.get('/justice/exhibits', seeCases, wrap(async (req, res) => {
     page(res, req, 'Evidence and Exhibits', JV.exhibitsPage(req.user, J.exhibits().slice().reverse(), req.session.csrf, mayFile(req.user), J.cases(), J.warrants()));
   }));
@@ -688,8 +670,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     req.session.flash = { text: 'Struck from the register of exhibits.' };
     res.redirect('/justice/exhibits');
   }));
-
-  // ---- Fines and restitution ----
 
   app.get('/justice/dues', seeCases, wrap(async (req, res) => {
     page(res, req, 'Fines and Restitution', JV.duesPage(req.user, J.dues().slice().reverse(), req.session.csrf, mayFile(req.user), J.cases(), J.duesTotals()));
@@ -725,8 +705,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/justice/dues');
   }));
 
-  // ---- Sentences ----
-
   app.get('/justice/sentences', seeCases, wrap(async (req, res) => {
     page(res, req, 'Sentences of the Bench', JV.sentencesPage(req.user, J.sentences().slice().reverse(), req.session.csrf, mayJudge(req.user), J.cases()));
   }));
@@ -748,8 +726,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     req.session.flash = { text: 'The sentence is struck.' };
     res.redirect('/justice/sentences');
   }));
-
-  // ---- The report ----
 
   app.get('/justice/report', seeCases, wrap(async (req, res) => {
     const from = String(req.query.from || ''), to = String(req.query.to || '');
