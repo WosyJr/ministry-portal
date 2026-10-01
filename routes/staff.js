@@ -56,7 +56,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     if (A.can(u, 'correspondence')) d.counts.push([Records.requests().filter(q => q.status === 'Pending').length, 'ministry requests', '/staff/correspondence']);
     if (A.can(u, 'request')) d.requests = Records.requests().filter(q => q.by === u.username).reverse().slice(0, 8);
     if (A.can(u, 'bulletin')) d.bulletin = S.read('bulletin.json', []).sort((a, b) => (b.pinned - a.pinned) || b.at.localeCompare(a.at)).slice(0, 3);
-    res.page({ title: 'My Desk', active: 'desk', body: SV.desk(u, d), flash: !G.connected() && u.all ? { err: true, html: 'The Ministry archives are not connected to Google yet. <a href="/admin/settings">Connect them in the Study</a>.' } : null });
+    res.page({ title: 'My Desk', active: 'desk', body: LV.deskFull(u, await deskItems(u)) + SV.desk(u, d), flash: !G.connected() && u.all ? { err: true, html: 'The Ministry archives are not connected to Google yet. <a href="/admin/settings">Connect them in the Study</a>.' } : null });
   }));
 
 
@@ -763,6 +763,18 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   const Desk = require('../lib/desk');
   const LV = require('../lib/lettersviews');
 
+  const deskItems = async (u) => {
+    const rows = (await Records.visible(u)) || [];
+    let week = null;
+    try {
+      const rank = Ranks.get(u.rank);
+      if (rank && rank.quota) week = Quota.weekFor(u, rows, Quota.weekKey(new Date()), Records.meta);
+    } catch (_) {}
+    const Lapse = require('../lib/lapse');
+    try { Lapse.sweep(rows, Records.meta, (no, st) => Records.setStatus(no, st), (who, text, link) => Notify.notifyUser(who, text, link)); } catch (_) {}
+    return Desk.gather(u, rows, { week, letters: Letters.waitingFor(u), due: Lapse.comingDue(rows, Records.meta, u) });
+  };
+
   r.get('/desk', need('desk'), wrap(async (req, res) => {
     const rows = (await Records.visible(req.user)) || [];
     let week = null;
@@ -770,27 +782,60 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       const rank = Ranks.get(req.user.rank);
       if (rank && rank.quota) week = Quota.weekFor(req.user, rows, Quota.weekKey(new Date()), Records.meta);
     } catch (_) {}
-    const d = Desk.gather(req.user, rows, { week, letters: Letters.waitingFor(req.user) });
-    res.page({ title: 'Your Desk', active: 'desk', body: LV.deskFull(req.user, d) });
+    const Lapse = require('../lib/lapse');
+    try {
+      Lapse.sweep(rows, Records.meta, (no, st) => Records.setStatus(no, st), (who, text, link) => Notify.notifyUser(who, text, link));
+    } catch (_) {}
+    const d = Desk.gather(req.user, rows, { week, letters: Letters.waitingFor(req.user), due: Lapse.comingDue(rows, Records.meta, req.user) });
+    res.page({ title: 'Your Desk', active: 'deskfull', body: LV.deskFull(req.user, d) });
   }));
 
   const Guide = require('../lib/guide');
   const GV = require('../lib/guideviews');
 
+  const Roll = require('../lib/roll');
+  const RollV = require('../lib/rollviews');
+
+  r.get('/roll', (req, res) => {
+    Roll.seed();
+    res.page({ title: 'The Roll of Office', active: 'roll', body: RollV.rollPage(req.user, Roll.offices()) });
+  });
+
   r.get('/guide', need('desk'), wrap(async (req, res) => {
     const rows = (await Records.visible(req.user)) || [];
-    res.page({ title: 'What You May Do', active: 'guide', body: GV.guidePage(req.user, Guide.progress(req.user, rows, Records.meta), req.session.csrf), noVeil: true });
+    res.page({ title: 'What You May Do', active: 'guide', body: GV.guidePage(req.user, Guide.progress(req.user, rows, Records.meta), req.session.csrf) });
   }));
 
   r.post('/guide/seen', need('desk'), checkCsrf, (req, res) => {
     Guide.markTourSeen(req.user);
+    req.session.tourStep = null;
     res.redirect(String(req.body.back || '/staff'));
+  });
+
+  r.post('/guide/step', need('desk'), checkCsrf, (req, res) => {
+    const n = parseInt(req.body.n, 10);
+    const steps = Guide.tourFor(req.user);
+    if (!Number.isFinite(n) || n < 0 || n >= steps.length) {
+      Guide.markTourSeen(req.user);
+      req.session.tourStep = null;
+      req.session.flash = { text: 'That is the tour. You may take it again from your Profile whenever you like.' };
+      return res.redirect('/staff/guide');
+    }
+    req.session.tourStep = n;
+    res.redirect(steps[n].at || '/staff');
   });
 
   r.post('/guide/again', need('desk'), checkCsrf, (req, res) => {
     Guide.resetTour(req.user);
-    req.session.flash = { text: 'You will be shown round the hall again.' };
-    res.redirect('/staff');
+    req.session.tourStep = 0;
+    const steps = Guide.tourFor(req.user);
+    res.redirect((steps[0] && steps[0].at) || '/staff');
+  });
+
+  r.post('/desk/read', need('desk'), checkCsrf, (req, res) => {
+    if (req.body.all) Notify.markAllRead(req.user);
+    else Notify.markRead(req.user, String(req.body.id || ''));
+    res.redirect(req.get('referer') || '/staff/desk');
   });
 
   r.get('/letters', need('desk'), wrap(async (req, res) => {

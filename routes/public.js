@@ -285,7 +285,20 @@ module.exports = (app, { checkCsrf, wrap }) => {
     if (!U.authenticate(u.username, cur)) return fail('Your current password is not correct.');
     if (next !== again) return fail('The two new passwords do not match.');
     if (next === cur) return fail('Choose a password different from the current one.');
+    const wasFirst = !!u.mustChange;
     try { U.update(u.username, { password: next, mustChange: false }); } catch (e) { return fail(e.message); }
+    if (wasFirst) {
+      try {
+        const Guide = require('../lib/guide');
+        const fresh = U.sessionUser(u.username);
+        if (!Guide.hasSeenTour(fresh)) {
+          req.session.tourStep = 0;
+          const steps = Guide.tourFor(fresh);
+          req.session.flash = { text: 'Your password is set. Welcome \u2014 here is the hall.' };
+          return res.redirect((steps[0] && steps[0].at) || A.homeFor(fresh));
+        }
+      } catch (_) {}
+    }
     req.session.flash = { text: 'Your password is changed.' };
     res.redirect(A.homeFor(U.sessionUser(u.username)));
   });
