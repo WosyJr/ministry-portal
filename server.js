@@ -12,6 +12,13 @@ const Records = require('./lib/records');
 const Settings = require('./lib/settings');
 const StaffRoom = require('./lib/staffroom');
 const Notify = require('./lib/notify');
+const Ranks = require('./lib/ranks');
+const Desk = require('./lib/desk');
+const Quota = require('./lib/quota');
+const Letters = require('./lib/letters');
+const LV = require('./lib/lettersviews');
+const Guide = require('./lib/guide');
+const GV = require('./lib/guideviews');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -37,6 +44,40 @@ async function badges(u) {
   return b;
 }
 
+function tourVeil(req, opts) {
+  try {
+    if (!req.user || opts.noVeil || !A.isStaff(req.user)) return '';
+    if (Guide.hasSeenTour(req.user)) return '';
+    if (String(req.originalUrl || '').indexOf('/staff/guide') === 0) return '';
+    return GV.tourOverlay(req.user, req.session.csrf, req.originalUrl || '/staff');
+  } catch (_) { return ''; }
+}
+
+function letterVeil(req, opts) {
+  try {
+    if (!req.user || opts.noVeil) return '';
+    const l = Letters.nextFor(req.user);
+    if (!l) return '';
+    if (String(req.originalUrl || '').indexOf('/staff/letters/') === 0) return '';
+    Letters.markSeen(l.id, req.user);
+    return LV.overlay(l, req.session.csrf, req.originalUrl || '/staff');
+  } catch (_) { return ''; }
+}
+
+async function deskFor(u) {
+  if (!u || !A.isStaff(u)) return null;
+  let rows = null;
+  try { rows = G.connected() ? (await Records.all() || []).filter(r => Records.canSee(u, r)) : null; } catch (_) {}
+  let week = null;
+  try {
+    const rank = Ranks.get(u.rank);
+    if (rank && rank.quota) week = Quota.weekFor(u, rows || [], Quota.weekKey(new Date()), Records.meta);
+  } catch (_) {}
+  let letters = [];
+  try { letters = Letters.waitingFor(u); } catch (_) {}
+  try { return Desk.gather(u, rows, { week, letters }); } catch (_) { return null; }
+}
+
 app.use((req, res, next) => {
   if (!req.session.csrf) req.session.csrf = crypto.randomBytes(18).toString('hex');
   if (req.session.user && !req.session.username) { req.session.username = req.session.user.username; req.session.user = null; }
@@ -53,7 +94,7 @@ app.use((req, res, next) => {
     const entered = req.session.entered; req.session.entered = null;
     // opts is spread first so an explicit flash that is undefined cannot wipe
     // the one waiting in the session after a redirect.
-    res.status(status || 200).send(V.layout({ ...opts, user: req.user, csrf: req.session.csrf, flash: opts.flash || flash, today: res.locals.today, badges: b, siteGround: Settings.pageGround(), siteCursor: Settings.cursor(), entered, staffRoom: StaffRoom.mayEnter(req.user) }));
+    res.status(status || 200).send(V.layout({ ...opts, user: req.user, csrf: req.session.csrf, flash: opts.flash || flash, today: res.locals.today, badges: b, siteGround: Settings.pageGround(), siteCursor: Settings.cursor(), entered, staffRoom: StaffRoom.mayEnter(req.user), desk: await deskFor(req.user), letter: tourVeil(req, opts) || letterVeil(req, opts) }));
   };
   res.say = (title, text, status) => res.page({ title, body: V.message(title, text) }, status);
   next();
