@@ -2148,15 +2148,161 @@ body.lamplit[class*="hour-"]::after{background:transparent}
 .clearall button{background:none;border:0;color:var(--sepia);font-family:var(--body);font-size:12px;
   text-transform:none;letter-spacing:0;cursor:pointer;text-decoration:underline;padding:0}
 .clearall button:hover{color:var(--blood)}
-.tourveil{background:rgba(43,27,14,.52);display:block}
-.tourspot{position:fixed;border-radius:3px;box-shadow:0 0 0 9999px rgba(43,27,14,.52),0 0 0 2px var(--gold-soft) inset;
-  outline:2px solid var(--blood);outline-offset:1px;pointer-events:none;z-index:1;transition:all .3s cubic-bezier(.3,.8,.35,1)}
-.tourveil{overflow-y:auto}
-.tourveil .tourcard{position:relative;z-index:3;max-width:430px;margin:12vh auto 0;opacity:1;
-  transition:top .3s ease,left .3s ease}
-.tourveil .tourcard.placed{position:fixed;margin:0}
-.tourskip{background:none;border:0;color:var(--sepia);font-family:var(--body);font-size:13px;text-decoration:underline;cursor:pointer;padding:0}
-.tourskip:hover{color:var(--blood)}
-.tbar{flex:1 1 auto;height:3px;background:var(--parch-3);margin-left:8px;display:block;min-width:50px}
+.tourveil{position:fixed;inset:0;z-index:210;background:transparent;pointer-events:none}
+.tourveil .tourspot{position:fixed;border-radius:3px;z-index:1;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(38,24,10,.58),0 0 0 2px var(--gold-soft);
+  outline:2px solid var(--blood);outline-offset:0;
+  transition:top .34s cubic-bezier(.3,.8,.35,1),left .34s cubic-bezier(.3,.8,.35,1),width .34s,height .34s}
+.tourlit{position:relative;z-index:2}
+.tourveil .tourcard{position:fixed;z-index:3;width:360px;max-width:calc(100vw - 24px);
+  background:var(--paper);border:1px solid var(--gold);border-top:3px solid var(--blood);
+  box-shadow:0 14px 38px rgba(27,16,6,.38);padding:14px 16px 12px;pointer-events:auto;
+  opacity:0;transition:opacity .2s ease,top .26s cubic-bezier(.3,.8,.35,1),left .26s cubic-bezier(.3,.8,.35,1)}
+.tourveil .tourcard.placed,.tourveil .tourcard.centred{opacity:1}
+.tourveil .tourcard.centred{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%)}
+.tourarrow{position:absolute;width:14px;height:14px;background:var(--paper);border:1px solid var(--gold);transform:rotate(45deg)}
+.tourarrow[hidden]{display:none}
+.tourarrow.a-up{top:-8px;margin-left:-7px;border-right:0;border-bottom:0;border-top-color:var(--blood);border-left-color:var(--blood)}
+.tourarrow.a-down{bottom:-8px;margin-left:-7px;border-left:0;border-top:0}
+.tourarrow.a-left{left:-8px;margin-top:-7px;border-right:0;border-top:0}
+.tourarrow.a-right{right:-8px;margin-top:-7px;border-left:0;border-bottom:0}
+.tourtop{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.tourtop .eyebrow{flex:0 0 auto;font-size:11px}
+.tbar{flex:1 1 auto;height:3px;background:var(--parch-3);display:block}
 .tbar span{display:block;height:100%;background:var(--blood);transition:width .3s ease}
-.tourout{margin:10px 0 0!important;font-size:13px;color:var(--sepia)}
+.tourcard h3{margin:0 0 6px;font-size:19px}
+.tourcard .tourbody{margin:0 0 9px;font-size:15.5px;line-height:1.5}
+.tourcard .toureg{margin:0 0 10px;font-size:14.5px;line-height:1.45;color:var(--sepia);
+  background:var(--parch-2);border-left:3px solid var(--gold);padding:7px 10px}
+.tourcard .toureg::before{content:"For example — ";font-weight:600;color:var(--ink)}
+.tourtry{margin:0 0 10px;font-size:14.5px;background:rgba(107,20,20,.07);border:1px dashed var(--blood);padding:7px 10px}
+.tourtry.did{background:rgba(62,90,43,.1);border-color:var(--ok);border-style:solid}
+.tourfoot{display:flex;gap:7px;align-items:center}
+.tourfoot form{display:inline}
+.tourleave{margin-left:auto}
+.tourskip{background:none;border:0;color:var(--sepia);font-family:var(--body);font-size:13px;
+  text-decoration:underline;cursor:pointer;padding:2px 0}
+.tourskip:hover{color:var(--blood)}
+.tourveil.letthrough .tourspot{pointer-events:none}
+@media (max-width:620px){.tourveil .tourcard{width:calc(100vw - 24px)!important;left:12px!important}.tourarrow{display:none}}
+
+.linkbtn{background:none;border:0;padding:0;margin:0;font-family:var(--body);color:var(--sepia);
+  text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.linkbtn:hover{color:var(--blood)}
+.linkbtn.tiny{font-size:12px;letter-spacing:.02em}
+.rollstrike{margin-left:6px}
+.rollnow .linkbtn,.rollpast .linkbtn{opacity:.5}
+.rollcard:hover .linkbtn,.rollpast li:hover .linkbtn{opacity:1}
+.rowform{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin:0}
+.rowform label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--sepia)}
+
+.handset{display:inline-flex;gap:8px;align-items:center;flex:none;margin-left:auto;padding-right:8px}
+.handset .linkbtn{font-size:11.5px;white-space:nowrap}
+.weekline.byhand{background:rgba(184,154,98,.14);border-radius:4px}
+.weekline.byhand .weekbody .dim{font-style:italic}
+
+.holdmap.sheet{width:100%;height:auto;display:block}
+.holdmap.sheet image{image-rendering:auto}
+.holdmap.sheet .hmland{fill:#6B1414;fill-opacity:var(--load,0);stroke:#6B1414;stroke-width:0;stroke-opacity:0;
+  mix-blend-mode:multiply;transition:fill-opacity .16s ease,stroke-width .16s ease,stroke-opacity .16s ease}
+.holdmap.sheet .hmhold:hover .hmland,.holdmap.sheet .hmhold:focus .hmland{fill-opacity:.2;stroke-width:2.4;stroke-opacity:.7}
+.holdmap.sheet .hmhold.here .hmland{fill-opacity:.2;stroke-width:2.4;stroke-opacity:.8}
+.holdmap.sheet .hmhold{outline:none}
+.holdmap.sheet .hmbadge circle{fill:#6B1414;stroke:#F1E6CC;stroke-width:2}
+.holdmap.sheet .hmbadge text{fill:#F6EEDA;font-family:var(--body);font-size:15px;font-weight:600}
+.maplegend{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin:10px 2px 0;font-size:12.5px;color:var(--sepia)}
+.maplegend .sw{display:inline-block;width:22px;height:11px;border:1px solid #9B7B3E;vertical-align:-1px;margin-right:6px}
+.mapcredit{margin:6px 2px 0;font-size:11.5px;color:var(--sepia);opacity:.75}
+.mapwrap.mapsmall{max-width:540px;margin:0 0 18px;padding:8px}
+.holdmap.sheet .hmhold,.holdmap.sheet .hmhold .hmland,.holdmap.sheet .hmhold text{animation:none!important}
+.holdmap.sheet .hmhold:hover .hmland,.holdmap.sheet .hmhold:focus .hmland{fill:#6B1414}
+
+.armsrow{display:grid;grid-template-columns:260px 1fr;gap:26px;align-items:start}
+@media (max-width:760px){.armsrow{grid-template-columns:1fr}}
+.armsshow{position:sticky;top:120px;text-align:center;background:var(--paper);border:3px double var(--gold);padding:18px 14px}
+.armsshow svg.arms{display:block;margin:0 auto 12px}
+.blazon{font-family:var(--display);font-size:15px;color:var(--ink);margin:0 0 4px;line-height:1.35}
+.motto{font-style:italic;color:var(--sepia);font-size:13.5px;margin:0}
+.armsform .section-label{margin-top:18px}
+.tinctrow{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.tinct{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);padding:4px 9px 4px 5px;cursor:pointer;
+  background:var(--paper);font-size:12.5px;color:var(--sepia);border-radius:2px}
+.tinct input{position:absolute;opacity:0;width:0;height:0}
+.tinct .chip-sw{display:inline-block;width:17px;height:17px;border:1px solid rgba(58,34,8,.5)}
+.tinct.on{border-color:var(--blood);color:var(--ink);box-shadow:inset 0 0 0 1px var(--blood)}
+.tinct:hover{border-color:var(--gold)}
+svg.arms{display:inline-block;vertical-align:middle}
+.armsblock{margin:0;text-align:center}
+.armsblock figcaption{font-size:12.5px;color:var(--sepia);margin-top:6px}
+.armsblock.small svg.arms{width:40px;height:auto}
+.armsbeside{display:flex;gap:14px;align-items:flex-start;margin:0 0 12px}
+.armsbeside svg.arms{flex:none}
+.armstag{display:inline-flex;align-items:center;gap:8px}
+.armstag svg.arms{flex:none}
+.dir-name.witharms{display:flex;align-items:flex-start;gap:9px}
+.dir-name.witharms svg.arms{flex:none;margin-top:1px}
+.rollnow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.rollnow svg.arms{flex:none}
+
+.ceremony{max-width:760px;margin:0 auto}
+.cerscroll{background:var(--paper);border:3px double var(--gold);padding:34px 38px 30px;
+  box-shadow:0 10px 32px rgba(24,12,4,.14)}
+@media (max-width:620px){.cerscroll{padding:22px 18px}}
+.cerhead{text-align:center;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:20px}
+.cerhead h2{margin:8px 0 6px}
+.cerday{font-family:var(--body);font-style:italic;color:var(--sepia);font-size:13.5px;letter-spacing:.06em}
+.cerlede{font-size:16px;line-height:1.62;margin:0 0 22px}
+.cerwho{text-align:center;padding:18px 10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:20px}
+.cername{font-family:var(--display);font-size:30px;color:var(--ink);line-height:1.15}
+.cerrank{font-family:var(--display);font-size:19px;color:var(--blood);margin-top:4px}
+.cerhall{font-style:italic;color:var(--sepia);font-size:13.5px;margin-top:4px}
+.cerbefore{margin:0 0 22px}
+.cerbefore ol{margin:0 0 6px}
+.ceroath{margin:4px 0 20px;padding-left:22px}
+.ceroath li{margin:0 0 12px;line-height:1.6;font-size:16px}
+.ceroath li::marker{color:var(--blood);font-family:var(--display)}
+.cernote{font-style:italic;color:var(--sepia);font-size:14px;line-height:1.6;border-left:3px solid var(--gold);padding-left:14px;margin:0 0 24px}
+.cerform{border-top:1px solid var(--line);padding-top:20px}
+.cersign{margin:14px 0 4px}
+.cersign input{width:100%;font-family:var(--display);font-size:22px;padding:10px 12px;background:transparent;
+  border:0;border-bottom:2px solid var(--line)}
+.cersign input:focus{outline:none;border-bottom-color:var(--blood)}
+.cerfoot{text-align:center;margin:18px 0 0}
+.cerlist li{margin-bottom:5px;line-height:1.5}
+.cerdone .armsbeside{align-items:flex-start}
+.sealcard .armsbeside{margin-bottom:0}
+.sealblank{display:inline-flex;align-items:center;justify-content:center;width:52px;height:62px;flex:none;
+  border:2px dashed var(--line);color:var(--line);font-family:var(--display);font-size:24px}
+.sealshow{text-align:center;background:var(--paper);border:3px double var(--gold);padding:18px 14px;align-self:start}
+.sealshow svg.arms{display:block;margin:0 auto 10px}
+
+.gazsheet{background:var(--paper);border:1px solid var(--line);padding:30px 34px 24px;margin:0 0 20px;
+  box-shadow:0 6px 22px rgba(24,12,4,.1)}
+@media (max-width:620px){.gazsheet{padding:20px 16px}}
+.gazhead{text-align:center;margin-bottom:22px}
+.gazrule{height:0;border-top:3px double var(--ink);margin:0 0 8px}
+.gazhead .gazrule:last-child{margin:10px 0 0}
+.gaztitle{font-family:var(--display);font-size:42px;line-height:1.05;color:var(--ink);letter-spacing:.01em}
+@media (max-width:620px){.gaztitle{font-size:30px}}
+.gazsub{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 22px;margin-top:8px;
+  font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--sepia)}
+.gazsub .gazno{color:var(--blood);font-weight:600}
+.gazstand{font-size:17px;line-height:1.6;font-style:italic;color:var(--ink);
+  border-bottom:1px solid var(--line);padding-bottom:16px;margin:0 0 20px;text-align:center}
+.gazsec{margin:0 0 22px;break-inside:avoid}
+.gazsec h3{font-family:var(--display);font-size:21px;margin:0 0 2px;color:var(--blood);
+  border-bottom:1px solid var(--line);padding-bottom:4px}
+.gazlead{font-size:12.5px;font-style:italic;color:var(--sepia);margin:6px 0 10px}
+.gazitem{margin:0 0 12px}
+.gazitem h4{font-family:var(--display);font-size:16.5px;margin:0 0 2px;font-weight:500}
+.gazitem p{margin:0;font-size:14px;line-height:1.55;color:var(--sepia)}
+.gazfoot{border-top:1px solid var(--line);margin-top:18px;padding-top:10px;
+  font-size:11.5px;font-style:italic;color:var(--sepia);text-align:center}
+@media (min-width:860px){.gazsheet .gazsec{column-break-inside:avoid}}
+.gazrows{display:grid;gap:14px;margin:8px 0 16px}
+.gazrow{display:grid;grid-template-columns:200px 1fr;gap:8px 12px;align-items:start;
+  border-left:3px solid var(--parch-3);padding:10px 0 10px 12px}
+.gazrow textarea,.gazrow input[type=text]{grid-column:2}
+.gazrow select{grid-column:1;grid-row:1 / span 2}
+.gazrow .checkline{grid-column:2;font-size:12.5px;margin:0}
+@media (max-width:700px){.gazrow{grid-template-columns:1fr}.gazrow select,.gazrow textarea,.gazrow input[type=text],.gazrow .checkline{grid-column:1}.gazrow select{grid-row:auto}}
