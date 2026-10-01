@@ -2067,3 +2067,40 @@ body.veiled{overflow:hidden}
 .glossary dt{font-weight:600;margin-top:7px}
 .glossary dd{margin:0 0 2px;color:var(--sepia);font-size:15px}
 abbr.term{text-decoration:none;border-bottom:2px dotted var(--blood);cursor:help}
+.deskpanel[hidden]{display:none}
+.letterveil[hidden],.tourveil[hidden]{display:none}
+.toureg{background:var(--parch-2);border-left:3px solid var(--gold);padding:9px 12px;font-size:15px;color:var(--sepia);margin:0 0 16px!important}
+.tourcard .btn[disabled]{opacity:.4;cursor:default}
+.tabs-inner.pub.quiet{opacity:.56}
+.tabs-inner.pub.quiet a{font-size:15px}
+.tabs-inner.pub.quiet:hover,.tabs-inner.pub.quiet:focus-within{opacity:1}
+.moretab{position:relative;display:inline-flex}
+.morebtn{font-family:var(--display);font-size:16px;color:var(--blood);background:none;border:1px solid var(--line);
+  padding:7px 11px 6px;cursor:pointer;border-radius:2px;white-space:nowrap}
+.morebtn:hover{border-color:var(--blood);background:var(--parch-2)}
+.morebtn .caret{font-size:11px}
+.morebtn .badge.dot{padding:0 5px}
+.moremenu{position:absolute;top:calc(100% + 4px);left:0;min-width:250px;background:var(--paper);
+  border:1px solid var(--gold);box-shadow:0 12px 30px rgba(43,27,14,.26);padding:8px 0;z-index:70}
+.moremenu[hidden]{display:none}
+.moremenu .mgroup{padding:2px 0}
+.moremenu .mgroup+.mgroup{border-top:1px solid var(--parch-3);margin-top:6px;padding-top:8px}
+.moremenu .mh{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:600;padding:4px 16px 5px}
+.moremenu a{display:block;padding:6px 16px;text-decoration:none;color:var(--ink);font-size:15.5px}
+.moremenu a:hover{background:var(--parch-2);color:var(--blood)}
+.moremenu a.on{color:var(--blood);font-weight:600}
+.jumpbtn{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-family:var(--body);font-size:14px;
+  color:var(--gold);background:#FBF5E6;border:1px solid var(--line);padding:5px 10px;cursor:pointer;border-radius:2px}
+.jumpbtn:hover{color:var(--blood);border-color:var(--blood)}
+.jumpbtn .key{border:1px solid var(--line);padding:0 5px;font-size:12px;border-radius:2px}
+.jumpveil{position:fixed;inset:0;background:rgba(43,27,14,.42);z-index:220;display:flex;align-items:flex-start;justify-content:center;padding:12vh 16px 16px}
+.jumpveil[hidden]{display:none}
+.jumpcard{width:min(560px,100%);background:var(--paper);border:1px solid var(--gold);border-top:3px solid var(--blood);box-shadow:0 18px 44px rgba(27,16,6,.4)}
+#jumpinput{width:100%;font-family:var(--body);font-size:19px;padding:14px 16px;border:0;border-bottom:1px solid var(--line);background:#FBF5E6;color:var(--ink);outline:none}
+.jumplist{max-height:330px;overflow-y:auto;padding:6px 0}
+a.jumpitem{display:flex;justify-content:space-between;gap:12px;padding:9px 16px;text-decoration:none;color:var(--ink);font-size:16px}
+a.jumpitem.on{background:var(--blood);color:#F6EDD6}
+a.jumpitem .jn{font-size:13px;opacity:.75}
+.jumphint{border-top:1px solid var(--parch-3);padding:7px 16px;font-size:13px;color:var(--sepia)}
+body.jumping{overflow:hidden}
+.ledger.tight td,.ledger.tight th{padding:5px 8px;font-size:14px}
