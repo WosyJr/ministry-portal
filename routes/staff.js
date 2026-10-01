@@ -741,6 +741,134 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.page({ title: 'Handbook Quiz', active: 'training', body: SV.quiz(QUIZ, req.session.csrf, result) });
   });
 
+  const Quota = require('../lib/quota');
+  const QV = require('../lib/quotaviews');
+  const hasQuota = u => {
+    if (!u) return false;
+    const rank = Ranks.get(u.rank);
+    return !!(rank && rank.quota);
+  };
+  const needQuota = (req, res, next) => (hasQuota(req.user) || (req.user && req.user.all)) ? next() : next('forbidden');
+
+  const sweepWeeks = async (rows) => {
+    try {
+      Quota.closePast(rows || [], Records.meta, (text, link) => {
+        U.list().filter(o => o.active !== false && (Ranks.get(o.rank) || {}).all).forEach(m => Notify.notifyUser(m.username, text, link));
+      });
+    } catch (e) { console.error('quota sweep', e.message); }
+  };
+
+  const Letters = require('../lib/letters');
+  const Desk = require('../lib/desk');
+  const LV = require('../lib/lettersviews');
+
+  r.get('/desk', need('desk'), wrap(async (req, res) => {
+    const rows = (await Records.visible(req.user)) || [];
+    let week = null;
+    try {
+      const rank = Ranks.get(req.user.rank);
+      if (rank && rank.quota) week = Quota.weekFor(req.user, rows, Quota.weekKey(new Date()), Records.meta);
+    } catch (_) {}
+    const d = Desk.gather(req.user, rows, { week, letters: Letters.waitingFor(req.user) });
+    res.page({ title: 'Your Desk', active: 'desk', body: LV.deskFull(req.user, d) });
+  }));
+
+  const Guide = require('../lib/guide');
+  const GV = require('../lib/guideviews');
+
+  r.get('/guide', need('desk'), wrap(async (req, res) => {
+    const rows = (await Records.visible(req.user)) || [];
+    res.page({ title: 'What You May Do', active: 'guide', body: GV.guidePage(req.user, Guide.progress(req.user, rows, Records.meta), req.session.csrf), noVeil: true });
+  }));
+
+  r.post('/guide/seen', need('desk'), checkCsrf, (req, res) => {
+    Guide.markTourSeen(req.user);
+    res.redirect(String(req.body.back || '/staff'));
+  });
+
+  r.post('/guide/again', need('desk'), checkCsrf, (req, res) => {
+    Guide.resetTour(req.user);
+    req.session.flash = { text: 'You will be shown round the hall again.' };
+    res.redirect('/staff');
+  });
+
+  r.get('/letters', need('desk'), wrap(async (req, res) => {
+    res.page({ title: 'Letters', active: 'letters', body: LV.lettersPage(req.user, Letters.sentBy(req.user.username), Letters.waitingFor(req.user), req.session.csrf, U.list(), Ranks.all()) });
+  }));
+
+  r.post('/letters', need('officers'), checkCsrf, (req, res) => {
+    try {
+      const l = Letters.write(req.body || {}, req.user);
+      Activity.log(req.user, 'wrote to the Ministry', '', l.subject);
+      req.session.flash = { text: `Your letter goes to ${l.toLabel}.` };
+      return res.redirect('/staff/letters/' + encodeURIComponent(l.id) + '/who');
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/staff/letters');
+  });
+
+  r.get('/letters/:id/who', need('desk'), (req, res) => {
+    const got = Letters.receipts(String(req.params.id));
+    if (!got) return res.say('No such letter', 'Nothing answers to that.', 404);
+    if (got.letter.by !== req.user.username && !req.user.all) return res.say('Not your letter', 'Only the officer who wrote it may see who has read it.', 403);
+    res.page({ title: got.letter.subject, active: 'letters', body: LV.receiptsPage(req.user, got, req.session.csrf) });
+  });
+
+  r.get('/letters/:id', need('desk'), (req, res) => {
+    const l = Letters.get(String(req.params.id));
+    if (!l) return res.say('No such letter', 'Nothing answers to that.', 404);
+    const mine = l.names.includes(req.user.username);
+    if (!mine && l.by !== req.user.username && !req.user.all) return res.say('Not for you', 'That letter was not written to you.', 403);
+    if (mine) Letters.markSeen(l.id, req.user);
+    res.page({ title: l.subject, active: 'letters', body: LV.letterPage(req.user, l, mine, req.session.csrf) });
+  });
+
+  r.post('/letters/:id/read', need('desk'), checkCsrf, (req, res) => {
+    const l = Letters.acknowledge(String(req.params.id), req.user);
+    if (l && l.by) Notify.notifyUser(l.by, `${req.user.name} has set their hand to “${l.subject}”.`, '/staff/letters/' + encodeURIComponent(l.id) + '/who');
+    req.session.flash = { text: 'Entered as read.' };
+    res.redirect(String(req.body.back || '/staff'));
+  });
+
+  r.post('/letters/:id/remove', need('officers'), checkCsrf, (req, res) => {
+    Letters.remove(String(req.params.id), req.user);
+    req.session.flash = { text: 'The letter is withdrawn.' };
+    res.redirect('/staff/letters');
+  });
+
+  r.get('/week', need('file'), needQuota, wrap(async (req, res) => {
+    const rows = await Records.visible(req.user) || [];
+    await sweepWeeks(rows);
+    const wk = Quota.weekKey(new Date());
+    const w = Quota.weekFor(req.user, rows, wk, Records.meta);
+    res.page({ title: 'Your Week', active: 'week', body: QV.weekPage(req.user, w, Quota.recordFor(req.user.username).slice(0, 10), Quota.settings()) });
+  }));
+
+  r.get('/delegates', need('officers'), wrap(async (req, res) => {
+    const rows = await Records.visible(req.user) || [];
+    await sweepWeeks(rows);
+    const list = Quota.standing(rows, Records.meta);
+    res.page({ title: 'The Delegates', active: 'delegates', body: QV.standingPage(req.user, list, Quota.settings(), req.session.csrf, Quota.weekKey(new Date())) });
+  }));
+
+  r.post('/delegates/settings', need('officers'), checkCsrf, (req, res) => {
+    const b = req.body || {};
+    Quota.setSettings({ rounds: b.rounds, paper: !!b.paper, duty: !!b.duty, duties: b.duties });
+    Activity.log(req.user, 'set what a week asks of a Delegate', '');
+    req.session.flash = { text: 'The week is set down.' };
+    res.redirect('/staff/delegates');
+  });
+
+  r.post('/delegates/:username/duty', need('officers'), checkCsrf, (req, res) => {
+    const who = String(req.params.username);
+    const t = U.view(who);
+    if (!t) { req.session.flash = { err: true, text: 'No officer answers to that.' }; return res.redirect('/staff/delegates'); }
+    const d = Quota.assignDuty(who, String(req.body.week || Quota.weekKey(new Date())), req.body.duty);
+    Activity.log(req.user, 'set a duty upon a Delegate', '', t.name);
+    Notify.notifyUser(who, d && d.assigned ? `The Minister has set your duty this week: ${d.text}` : 'Your duty this week is back on the rotation.', '/staff/week');
+    req.session.flash = { text: d && d.assigned ? `${t.name} is set their duty.` : `${t.name} goes back on the rotation.` };
+    res.redirect('/staff/delegates');
+  });
+
   r.get('/report', need('reports'), wrap(async (req, res) => {
     const rows = await Records.visible(req.user) || [];
     const since = Date.now() - 7 * 86400000;
