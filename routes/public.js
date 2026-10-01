@@ -253,6 +253,18 @@ module.exports = (app, { checkCsrf, wrap }) => {
 
   const Seals = require('../lib/seals');
   const SealsV = require('../lib/sealsviews');
+  const Arms = require('../lib/arms');
+  const ArmsV = require('../lib/armsviews');
+
+  app.get('/arms', (req, res) => {
+    const c = Arms.clean(req.query || {});
+    const who = String(req.query.who || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    res.page({
+      title: 'The Herald\u2019s Workshop', active: 'arms',
+      body: ArmsV.workshop(c, who)
+    });
+  });
+
   const Gaz = require('../lib/gazette');
   const GazV = require('../lib/gazetteviews');
 
