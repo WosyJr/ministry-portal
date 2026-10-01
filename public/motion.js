@@ -2,17 +2,26 @@
   var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   document.querySelectorAll('.tabs-inner, .warnav, .subnav').forEach(function (row) {
-    var links = row.querySelectorAll('a');
+    var own = function (a) { return !a.closest('.moremenu, .jumpveil, .deskpanel, .tourveil'); };
+    var links = [].slice.call(row.querySelectorAll('a')).filter(own);
     if (!links.length) return;
     var bar = document.createElement('span');
     bar.className = 'navglide';
     row.appendChild(bar);
-    var home = row.querySelector('a.on') || null;
-    window.addEventListener('resize', function () { move(row.querySelector('a:hover') || home, !!home); });
+    var onLink = row.querySelector('a.on');
+    var home = (onLink && own(onLink)) ? onLink : null;
+    window.addEventListener('resize', function () { move(hovered() || home, !!home); });
+    function hovered() {
+      for (var i = 0; i < links.length; i++) { if (links[i].matches(':hover')) return links[i]; }
+      return null;
+    }
     function move(a, show) {
-      if (!a) { bar.style.opacity = '0'; return; }
-      bar.style.width = a.offsetWidth + 'px';
-      bar.style.transform = 'translate(' + a.offsetLeft + 'px,' + (a.offsetTop + a.offsetHeight - 3) + 'px)';
+      if (!a || !own(a)) { bar.style.opacity = '0'; return; }
+      var r = a.getBoundingClientRect();
+      var p = row.getBoundingClientRect();
+      if (!r.width) { bar.style.opacity = '0'; return; }
+      bar.style.width = Math.round(r.width) + 'px';
+      bar.style.transform = 'translate(' + Math.round(r.left - p.left) + 'px,' + Math.round(r.bottom - p.top - 3) + 'px)';
       bar.style.opacity = show ? '1' : '0';
     }
     links.forEach(function (a) {

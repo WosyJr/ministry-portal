@@ -118,6 +118,14 @@ module.exports = (app, { checkCsrf, wrap }) => {
         req.session.flash = { text: 'Updated ' + t.name + '.' };
         Activity.log(req.user, 'updated an officer', '', t.name);
       }
+      else if (act === 'unlink-discord') {
+        if (!req.user.all) throw new Error('Only the Minister may unlink a Discord.');
+        const was = U.unlinkDiscord(who);
+        req.session.flash = was
+          ? { text: `${t.name} is no longer linked to Discord (${was.name || was.username}). They enter by name and password until they link it again.` }
+          : { err: true, text: `${t.name} has no Discord linked.` };
+        if (was) Activity.log(req.user, 'unlinked a Discord', '', t.name);
+      }
       else if (act === 'remove') { if (who === req.user.username) throw new Error('You cannot strike your own name from the rolls.'); U.remove(who); req.session.flash = { text: 'Removed ' + t.name + ' from the rolls.' }; Activity.log(req.user, 'removed an officer', '', t.name); }
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
     res.redirect('/admin');
@@ -142,6 +150,25 @@ module.exports = (app, { checkCsrf, wrap }) => {
       Activity.log(req.user, 'gave a login', '', `${req.body.name} (${(Ranks.get(req.body.rank) || {}).name || ''})`);
       return provinceBody(req, res, { username: un, name: req.body.name, password: pw, fresh: true }, null);
     } catch (e) { return provinceBody(req, res, null, { err: true, text: e.message }); }
+  });
+
+  r.get('/vault', ministerOnly, (req, res) => {
+    const V = require('../lib/vault');
+    const st = V.state();
+    const rows = (d) => d.map(x => `<tr><td>${x.day}</td><td class="num">${x.file}</td></tr>`).join('');
+    res.page({ title: 'The Strongroom', body: `<section>
+      <h2>The Strongroom</h2>
+      <p class="lede">A copy of the whole Docket is kept here, outside Google. If Google cannot be reached, the hall reads from this copy rather than showing nothing.</p>
+      ${st.has
+        ? `<p class="notice">The last copy holds <b>${st.count} records</b>, taken ${new Date(st.at).toLocaleString('en-GB')}.</p>`
+        : '<p class="notice">No copy has been kept yet. One is written the first time the Docket is read.</p>'}
+      <div class="section-label">Copies by the day</div>
+      ${st.days.length
+        ? `<div class="tablewrap"><table class="ledger"><thead><tr><th>Day</th><th class="num">File</th></tr></thead><tbody>${rows(st.days)}</tbody></table></div>`
+        : '<p class="hint">None yet.</p>'}
+      <p class="hint">One copy a day is kept, and the last ${V.KEEP} days are held. They sit in the Ministry\u2019s own data, beside the rolls \u2014 so a copy survives anything that happens to the sheet.</p>
+      <p class="hint">This copy is read-only. Nothing can be filed or sealed while Google is unreachable, because a record must have a number and a place on the sheet before it is real.</p>
+    </section>` });
   });
 
   r.post('/people/:username/:action', ministerOnly, checkCsrf, (req, res) => {

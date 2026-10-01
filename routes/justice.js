@@ -753,7 +753,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
 
   app.get('/justice/report', seeCases, wrap(async (req, res) => {
     const from = String(req.query.from || ''), to = String(req.query.to || '');
-    page(res, req, 'The Report of the Ministry', JV.reportPage(req.user, J.report(from, to), from, to, req.user.name));
+    page(res, req, 'The Report of the Ministry', JV.reportPage(req.user, J.report(from, to, req.user), from, to, req.user.name));
   }));
 
   app.get('/justice/report/doc', seeCases, wrap(async (req, res) => {
