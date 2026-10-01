@@ -60,7 +60,9 @@
     window.addEventListener('resize', function () { if (open) place(open); });
     window.addEventListener('scroll', function () { if (open) place(open); }, { passive: true });
 
-    var start = wrap.querySelector('.hmhold.here');
-    if (start) show(start);
+    if (!svg.classList.contains('spotlit')) {
+      var start = wrap.querySelector('.hmhold.here');
+      if (start) show(start);
+    }
   }
 })();

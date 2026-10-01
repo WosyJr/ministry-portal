@@ -775,7 +775,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     return Desk.gather(u, rows, { week, letters: Letters.waitingFor(u), due: Lapse.comingDue(rows, Records.meta, u) });
   };
 
-  r.get('/desk', need('desk'), wrap(async (req, res) => {
+  r.get('/desk', wrap(async (req, res) => {
     const rows = (await Records.visible(req.user)) || [];
     let week = null;
     try {
@@ -787,7 +787,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       Lapse.sweep(rows, Records.meta, (no, st) => Records.setStatus(no, st), (who, text, link) => Notify.notifyUser(who, text, link));
     } catch (_) {}
     const d = Desk.gather(req.user, rows, { week, letters: Letters.waitingFor(req.user), due: Lapse.comingDue(rows, Records.meta, req.user) });
-    res.page({ title: 'Your Desk', active: 'deskfull', body: LV.deskFull(req.user, d) });
+    res.page({ title: 'Your Desk', active: 'deskfull', ...branchFlags(req.user), body: LV.deskFull(req.user, d) });
   }));
 
   const Guide = require('../lib/guide');
@@ -839,7 +839,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.page({
       title: 'What You May Do', active: 'guide',
       ...branchFlags(req.user),
-      body: GV.guidePage(req.user, Guide.progress(req.user, rows, Records.meta), req.session.csrf)
+      body: GV.guidePage(req.user, Guide.progress(req.user, rows, Records.meta), req.session.csrf, Cer.taken(req.user.username))
     });
   }));
 
@@ -869,14 +869,14 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect((steps[0] && steps[0].at) || Guide.branchHome(req.user));
   });
 
-  r.post('/desk/read', need('desk'), checkCsrf, (req, res) => {
+  r.post('/desk/read', checkCsrf, (req, res) => {
     if (req.body.all) Notify.markAllRead(req.user);
     else Notify.markRead(req.user, String(req.body.id || ''));
     res.redirect(req.get('referer') || '/staff/desk');
   });
 
-  r.get('/letters', need('desk'), wrap(async (req, res) => {
-    res.page({ title: 'Letters', active: 'letters', body: LV.lettersPage(req.user, Letters.sentBy(req.user.username), Letters.waitingFor(req.user), req.session.csrf, U.list(), Ranks.all()) });
+  r.get('/letters', wrap(async (req, res) => {
+    res.page({ title: 'Letters', active: 'letters', ...branchFlags(req.user), body: LV.lettersPage(req.user, Letters.sentBy(req.user.username), Letters.waitingFor(req.user), req.session.csrf, U.list(), Ranks.all()) });
   }));
 
   r.post('/letters', need('officers'), checkCsrf, (req, res) => {
@@ -889,27 +889,33 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect('/staff/letters');
   });
 
-  r.get('/letters/:id/who', need('desk'), (req, res) => {
+  r.get('/letters/:id/who', (req, res) => {
     const got = Letters.receipts(String(req.params.id));
     if (!got) return res.say('No such letter', 'Nothing answers to that.', 404);
     if (got.letter.by !== req.user.username && !req.user.all) return res.say('Not your letter', 'Only the officer who wrote it may see who has read it.', 403);
-    res.page({ title: got.letter.subject, active: 'letters', body: LV.receiptsPage(req.user, got, req.session.csrf) });
+    res.page({ title: got.letter.subject, active: 'letters', ...branchFlags(req.user), body: LV.receiptsPage(req.user, got, req.session.csrf) });
   });
 
-  r.get('/letters/:id', need('desk'), (req, res) => {
+  r.get('/letters/:id', (req, res) => {
     const l = Letters.get(String(req.params.id));
     if (!l) return res.say('No such letter', 'Nothing answers to that.', 404);
     const mine = l.names.includes(req.user.username);
     if (!mine && l.by !== req.user.username && !req.user.all) return res.say('Not for you', 'That letter was not written to you.', 403);
     if (mine) Letters.markSeen(l.id, req.user);
-    res.page({ title: l.subject, active: 'letters', body: LV.letterPage(req.user, l, mine, req.session.csrf) });
+    res.page({ title: l.subject, active: 'letters', ...branchFlags(req.user), body: LV.letterPage(req.user, l, mine, req.session.csrf) });
   });
 
-  r.post('/letters/:id/read', need('desk'), checkCsrf, (req, res) => {
+  r.post('/letters/:id/read', checkCsrf, (req, res) => {
+    const home = Guide.branchHome(req.user);
     const l = Letters.acknowledge(String(req.params.id), req.user);
-    if (l && l.by) Notify.notifyUser(l.by, `${req.user.name} has set their hand to “${l.subject}”.`, '/staff/letters/' + encodeURIComponent(l.id) + '/who');
-    req.session.flash = { text: 'Entered as read.' };
-    res.redirect(String(req.body.back || '/staff'));
+    if (!l) {
+      req.session.flash = { err: true, text: 'That letter was not written to you, so there was nothing to set your hand to.' };
+      return res.redirect(back(req, home));
+    }
+    if (l.by) Notify.notifyUser(l.by, `${req.user.name} has set their hand to “${l.subject}”.`, '/staff/letters/' + encodeURIComponent(l.id) + '/who');
+    const left = Letters.mustFor(req.user).length;
+    req.session.flash = { text: left ? `Entered as read. ${left === 1 ? 'One more letter waits' : left + ' more letters wait'} on you.` : 'Entered as read.' };
+    res.redirect(back(req, home));
   });
 
   r.post('/letters/:id/remove', need('officers'), checkCsrf, (req, res) => {

@@ -146,6 +146,16 @@ module.exports = function (app, { checkCsrf }) {
     show(req, res, 'desk', SRV.deskPage(srv(req), K.mayAssign(req.user), req.session.csrf, q, q ? RB.assess(q, srv(req)) : null));
   });
 
+  const GameLog = require('../lib/gamelog');
+  app.get('/province/staff/log', gate, (req, res) => {
+    const q = String((req.query && req.query.q) || '');
+    show(req, res, 'log', SRV.logPage(srv(req), req.session.csrf, q, q ? GameLog.read(q) : null));
+  });
+  app.post('/province/staff/log', gate, checkCsrf, (req, res) => {
+    const q = String((req.body || {}).q || '').slice(0, 60000);
+    show(req, res, 'log', SRV.logPage(srv(req), req.session.csrf, q, q ? GameLog.read(q) : null));
+  });
+
   app.get('/province/staff/who', minister, (req, res) =>
     show(req, res, 'who', SRV.whoPage(srv(req), withRights(), K.allowed(), req.session.csrf, req.user)));
 

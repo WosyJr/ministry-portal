@@ -152,24 +152,105 @@ module.exports = (app, { checkCsrf, wrap }) => {
     } catch (e) { return provinceBody(req, res, null, { err: true, text: e.message }); }
   });
 
-  r.get('/vault', ministerOnly, (req, res) => {
+  const Off = require('../lib/offsite');
+
+  function vaultBody(req, res, flash) {
     const V = require('../lib/vault');
     const st = V.state();
-    const rows = (d) => d.map(x => `<tr><td>${x.day}</td><td class="num">${x.file}</td></tr>`).join('');
-    res.page({ title: 'The Strongroom', body: `<section>
+    const off = Off.state();
+    const h = `<input type="hidden" name="_csrf" value="${req.session.csrf}">`;
+    const when = iso => { try { return new Date(iso).toLocaleString('en-GB'); } catch (_) { return ''; } };
+    const size = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+    const rows = d => d.map(x => `<tr><td>${V_esc(x.day)}</td><td class="num">${V_esc(x.file)}</td></tr>`).join('');
+
+    res.page({ title: 'The Strongroom', flash, body: `<section>
       <h2>The Strongroom</h2>
-      <p class="lede">A copy of the whole Docket is kept here, outside Google. If Google cannot be reached, the hall reads from this copy rather than showing nothing.</p>
+      <p class="lede">Where a copy of the Ministry\u2019s rolls is kept, so that losing one thing never loses everything.</p>
+
+      <div class="section-label">The Copy Kept Here</div>
       ${st.has
-        ? `<p class="notice">The last copy holds <b>${st.count} records</b>, taken ${new Date(st.at).toLocaleString('en-GB')}.</p>`
+        ? `<p class="notice">The last copy holds <b>${st.count} records</b>, taken ${when(st.at)}.</p>`
         : '<p class="notice">No copy has been kept yet. One is written the first time the Docket is read.</p>'}
-      <div class="section-label">Copies by the day</div>
       ${st.days.length
         ? `<div class="tablewrap"><table class="ledger"><thead><tr><th>Day</th><th class="num">File</th></tr></thead><tbody>${rows(st.days)}</tbody></table></div>`
         : '<p class="hint">None yet.</p>'}
-      <p class="hint">One copy a day is kept, and the last ${V.KEEP} days are held. They sit in the Ministry\u2019s own data, beside the rolls \u2014 so a copy survives anything that happens to the sheet.</p>
-      <p class="hint">This copy is read-only. Nothing can be filed or sealed while Google is unreachable, because a record must have a number and a place on the sheet before it is real.</p>
+      <p class="hint">One copy a day, the last ${V.KEEP} days held. If Google cannot be reached the hall reads from this copy rather than showing nothing \u2014 read-only, because a record must have a number upon the sheet before it is real.</p>
+      <p class="notice">This copy sits on the same machine as the hall itself. That is enough for a bad morning at Google. It is <b>not</b> enough for a bad day at Railway, which is what the next part is for.</p>
+
+      <div class="section-label">The Copy Kept Elsewhere</div>
+      ${!off.configured
+        ? `<article class="reqcard rulesetcard">
+            <p style="margin:0 0 10px"><b>Nothing is being sent off-site.</b> Everything the Ministry has \u2014 the Docket, the rolls, the ranks, the Gazette, the oaths \u2014 exists in exactly two places that can both fail on the same afternoon.</p>
+            <p class="hint" style="margin:0">Set these in Railway and a copy goes out nightly, on its own. Cloudflare R2 and Backblaze B2 both give 10 GB free, which is some thousands of nights at the size this Ministry runs to.</p>
+            <dl class="meta" style="margin-top:12px">
+              <dt><code>OFFSITE_ENDPOINT</code></dt><dd>e.g. <code>https://&lt;account&gt;.r2.cloudflarestorage.com</code></dd>
+              <dt><code>OFFSITE_BUCKET</code></dt><dd>the bucket you made</dd>
+              <dt><code>OFFSITE_KEY_ID</code> and <code>OFFSITE_SECRET</code></dt><dd>an access key with write on that bucket, and nothing else</dd>
+              <dt><code>OFFSITE_PASSPHRASE</code></dt><dd><b>Set this.</b> The bundle is encrypted with it before it leaves. Without it the bundle goes out readable, and it contains your officers\u2019 password hashes. Keep a copy of the passphrase somewhere that is not Railway and not this hall \u2014 without it the bundle cannot be opened again, by you or by anyone.</dd>
+              <dt><code>OFFSITE_REGION</code></dt><dd>optional \u2014 <code>auto</code> for R2, the bucket\u2019s region for B2</dd>
+            </dl>
+          </article>`
+        : `<article class="reqcard">
+            <div class="no">${V_esc(off.where)} \u00b7 ${V_esc(off.bucket)}/${V_esc(off.prefix)}</div>
+            <p style="margin:0 0 8px">${off.lastAt
+              ? `Last sent <b>${when(off.lastAt)}</b> \u2014 ${off.lastRecords} records, ${size(off.lastBytes)}.`
+              : 'Set up, but nothing has been sent yet.'}</p>
+            <p class="hint" style="margin:0 0 4px">
+              ${off.encrypted
+                ? 'The bundle is <b>encrypted</b> before it leaves. It cannot be opened without the passphrase \u2014 keep that somewhere that is not Railway.'
+                : '<b>The bundle goes out readable.</b> It holds your officers\u2019 password hashes. Set <code>OFFSITE_PASSPHRASE</code> in Railway and it will be encrypted from the next run.'}
+            </p>
+            <p class="hint" style="margin:0">
+              ${off.includeBank
+                ? 'The Finance bank logins <b>are</b> in the bundle, because <code>OFFSITE_INCLUDE_BANK</code> is set to yes. Those are stored in plain words. Do not do this without a passphrase.'
+                : 'The Finance bank logins are <b>left out</b> of the bundle on purpose \u2014 they are kept in plain words, and sending them anywhere widens the harm if the store is ever read by somebody else.'}
+            </p>
+            ${off.lastError ? `<p class="notice" style="margin:10px 0 0"><b>The last attempt failed:</b> ${V_esc(off.lastError)}</p>` : ''}
+            <div class="linkrow">
+              <form method="post" action="/admin/vault/send" class="inline">${h}<button class="btn small" type="submit">Send a copy now</button></form>
+              <form method="post" action="/admin/vault/check" class="inline">${h}<button class="btn ghost small" type="submit">Just test the connection</button></form>
+            </div>
+          </article>
+          ${off.runs.length ? `<div class="tablewrap"><table class="ledger"><thead><tr><th>Sent</th><th>Records</th><th>Files</th><th class="num">Size</th><th>By</th></tr></thead><tbody>
+            ${off.runs.slice().reverse().map(r => `<tr><td>${when(r.at)}</td><td>${r.records}</td><td>${r.files}</td><td class="num">${size(r.bytes)}</td><td>${V_esc(r.by || '')}</td></tr>`).join('')}
+          </tbody></table></div>` : ''}
+          <p class="hint">A copy goes out once a day on its own, and again whenever you press the button. Each day keeps its own file, and <code>latest</code> is always the newest.</p>`}
+
+      <div class="section-label">Getting It Back</div>
+      <article class="reqcard dimcard">
+        <p style="margin:0 0 8px">A bundle is gzipped JSON holding the whole Docket and every roll the Ministry keeps. To read one back:</p>
+        <pre class="codeblock">node -e "const O=require('./lib/offsite'),z=require('zlib'),f=require('fs');
+const b=f.readFileSync('latest.json.gz.enc');
+f.writeFileSync('out.json', z.gunzipSync(O.decrypt(b, process.env.OFFSITE_PASSPHRASE)));"</pre>
+        <p class="hint" style="margin:8px 0 0">Drop <code>O.decrypt(...)</code> and just gunzip if no passphrase was set. Worth doing once now, while nothing is wrong \u2014 a backup nobody has ever opened is a rumour, not a backup.</p>
+      </article>
     </section>` });
-  });
+  }
+
+  const V_esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  r.get('/vault', ministerOnly, (req, res) => vaultBody(req, res, null));
+
+  r.post('/vault/send', ministerOnly, checkCsrf, wrap(async (req, res) => {
+    try {
+      const e = await Off.send(req.user);
+      Activity.log(req.user, 'sent a copy of the rolls off-site', e.key);
+      req.session.flash = { text: `Sent. ${e.records} records and ${e.files} rolls, ${Math.max(1, Math.round(e.bytes / 1024))} KB, as ${e.key}.` };
+    } catch (e) {
+      req.session.flash = { err: true, text: e.message };
+    }
+    res.redirect('/admin/vault');
+  }));
+
+  r.post('/vault/check', ministerOnly, checkCsrf, wrap(async (req, res) => {
+    try {
+      const c = await Off.check(req.user);
+      req.session.flash = { text: `The store answered. ${c.host} took a test file into ${c.bucket}.` };
+    } catch (e) {
+      req.session.flash = { err: true, text: e.message };
+    }
+    res.redirect('/admin/vault');
+  }));
 
   r.post('/people/:username/:action', ministerOnly, checkCsrf, (req, res) => {
     const who = req.params.username, act = req.params.action;
