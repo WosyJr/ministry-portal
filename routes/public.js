@@ -314,6 +314,9 @@ module.exports = (app, { checkCsrf, wrap }) => {
   app.get('/app', (req, res) =>
     res.page({ title: 'Put the Ministry on your machine', body: Policy.installPage() }));
 
+  app.get('/download', (req, res) =>
+    res.page({ title: 'The Ministry on your own machine', body: Policy.downloadPage() }));
+
   const Discord = require('../lib/discord');
 
   function enterHall(req, user, to) {
@@ -325,15 +328,34 @@ module.exports = (app, { checkCsrf, wrap }) => {
     return safe || A.homeFor(U.sessionUser(user.username));
   }
 
+  const Handoff = require('../lib/apphandoff');
+
   app.get('/auth/discord/login', (req, res) => {
     if (!Discord.configured()) return res.say('Discord is not set up', 'The Ministry has not been given its Discord keys yet. Enter by name and password.', 503);
-    if (A.isStaff(req.user)) return res.redirect(A.homeFor(req.user));
+    const fromApp = String(req.query.app || '') === '1';
+    if (A.isStaff(req.user) && !fromApp) return res.redirect(A.homeFor(req.user));
     const state = Discord.newState();
     req.session.dstate = state;
     req.session.dmode = 'login';
+    req.session.dapp = fromApp;
     req.session.dto = String(req.query.to || req.session.returnTo || '');
+    if (A.isStaff(req.user) && fromApp) return res.redirect('/auth/app/hand?code=' + encodeURIComponent(Handoff.mint(req.user.username)));
     res.redirect(Discord.authUrl(state, req));
   });
+
+  app.get('/auth/app/hand', (req, res) => {
+    const code = String(req.query.code || '');
+    res.page({ title: 'Returning you to the Ministry', body: V.appHandoff(code) });
+  });
+
+  app.get('/auth/app/claim', wrap(async (req, res) => {
+    const username = Handoff.redeem(String(req.query.code || ''));
+    if (!username) return res.say('That hand-back has lapsed', 'The one-time code was already used or is more than two minutes old. Sign in again from the app.', 400);
+    const found = U.find(username);
+    if (!found || found.active === false) return res.say('That officer is no longer upon the rolls', 'Ask the Minister to enter you again.', 403);
+    const dest = enterHall(req, U.view(username), '');
+    res.redirect(dest);
+  }));
 
   app.get('/auth/discord/link', A.requireStaff, (req, res) => {
     if (!Discord.configured()) return res.say('Discord is not set up', 'The Ministry has not been given its Discord keys yet.', 503);
@@ -397,6 +419,10 @@ module.exports = (app, { checkCsrf, wrap }) => {
     const user = U.view(found.username);
     const key = (req.ip || '') + '|discord|' + profile.id;
     A.succeeded(key);
+    if (req.session.dapp) {
+      req.session.dapp = null;
+      return res.redirect('/auth/app/hand?code=' + encodeURIComponent(Handoff.mint(user.username)));
+    }
     const dest = enterHall(req, user, to);
     if (U.sessionUser(found.username).mustChange) return res.redirect('/account/password');
     res.redirect(dest);
