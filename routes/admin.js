@@ -10,6 +10,7 @@ const Settings = require('../lib/settings');
 const Activity = require('../lib/activity');
 const Forms = require('../lib/forms');
 const C = require('../lib/config');
+const Records = require('../lib/records');
 
 const arr = v => (Array.isArray(v) ? v : v ? [v] : []);
 const clean = (s, max) => String(s ?? '').replace(/\r/g, '').trim().slice(0, max);
@@ -54,7 +55,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     inProvince(req, res, 'ranks', AV.ranksPage(Ranks.all(), counts(), req.session.csrf, req.user, true)));
 
   app.get('/province/settings', provinceGate, (req, res) =>
-    inProvince(req, res, 'settings', AV.settingsPage(Settings.get(), G.status(req), Settings.laws(), req.session.csrf, req.user, res.locals.today, true, { url: res.locals.site, fixed: C.BASE_URL_SET })));
+    inProvince(req, res, 'settings', AV.settingsPage(Settings.get(), G.status(req), Settings.laws(), req.session.csrf, req.user, res.locals.today, true, { url: res.locals.site, fixed: C.BASE_URL_SET }, Records.Spool.state())));
 
   app.get('/province/motion', provinceGate, (req, res) =>
     inProvince(req, res, 'motion', AV.motionPage(Settings.get(), res.locals.today, V.seasonOf(res.locals.today))));
@@ -431,6 +432,15 @@ f.writeFileSync('out.json', z.gunzipSync(O.decrypt(b, process.env.OFFSITE_PASSPH
     req.session.googleState = state;
     res.redirect(G.authUrl(state, req));
   });
+  r.post('/spool/flush', minister, checkCsrf, wrap(async (req, res) => {
+    const out = await Records.Spool.flush();
+    const left = Records.Spool.state().count;
+    req.session.flash = out.sent
+      ? { text: `${out.sent} ${out.sent === 1 ? 'piece' : 'pieces'} sent to the archives.` + (left ? ` ${left} still held.` : ' Nothing is held now.') }
+      : { err: true, text: left ? 'Google still will not take them. They remain held and will be tried again.' : 'Nothing was waiting.' };
+    res.redirect('/province/settings');
+  }));
+
   r.post('/google/disconnect', minister, checkCsrf, (req, res) => { G.disconnect(); req.session.flash = { text: 'Google disconnected.' }; res.redirect('/admin/settings'); });
   app.use('/admin', r);
 

@@ -302,6 +302,15 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.page({ title: 'Ledger of Laws', active: 'laws', body: V.laws(Settings.laws(), directives) });
   }));
 
+  const Policy = require('../lib/policy');
+  const POLICY_UPDATED = '3 October 2026';
+
+  app.get('/privacy', (req, res) =>
+    res.page({ title: 'Privacy', body: Policy.privacy(POLICY_UPDATED) }));
+
+  app.get('/terms', (req, res) =>
+    res.page({ title: 'Terms of Use', body: Policy.terms(POLICY_UPDATED) }));
+
   const Discord = require('../lib/discord');
 
   function enterHall(req, user, to) {

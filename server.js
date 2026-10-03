@@ -99,7 +99,12 @@ app.use((req, res, next) => {
     const b = await badges(req.user);
     if (!opts.flash && req.user && Records.readingFromVault()) {
       const v = Records.Vault.state();
-      opts.flash = { err: true, html: 'The Ministry archives cannot be reached. You are reading the <b>last copy kept here</b>' + (v.at ? ', taken ' + new Date(v.at).toLocaleString('en-GB') : '') + '. Nothing can be filed or sealed until Google answers again.' };
+      let waiting = 0;
+      try { waiting = Records.Spool.state().count; } catch (_) {}
+      opts.flash = { err: true, html: 'The Ministry archives cannot be reached. You are reading the <b>last copy kept here</b>'
+        + (v.at ? ', taken ' + new Date(v.at).toLocaleString('en-GB') : '')
+        + '. You may still lay and seal records \u2014 they are <b>held here</b> and entered upon the Docket the moment Google answers.'
+        + (waiting ? ' <b>' + waiting + (waiting === 1 ? ' piece</b> of work waits' : ' pieces</b> of work wait') + ' to be sent.' : '') };
     }
     const entered = req.session.entered; req.session.entered = null;
     // opts is spread first so an explicit flash that is undefined cannot wipe
@@ -146,5 +151,6 @@ app.use((err, req, res, next) => {
 U.bootstrap();
 require('./lib/warseed').seedIfEmpty();
 try { require('./lib/offsite').begin(); } catch (_) {}
+try { require('./lib/records'); require('./lib/spool').resume(); } catch (_) {}
 if (require.main === module) app.listen(C.PORT, () => console.log(`Ministry portal listening on ${C.PORT}`));
 module.exports = app;
