@@ -311,6 +311,9 @@ module.exports = (app, { checkCsrf, wrap }) => {
   app.get('/terms', (req, res) =>
     res.page({ title: 'Terms of Use', body: Policy.terms(POLICY_UPDATED) }));
 
+  app.get('/app', (req, res) =>
+    res.page({ title: 'Put the Ministry on your machine', body: Policy.installPage() }));
+
   const Discord = require('../lib/discord');
 
   function enterHall(req, user, to) {

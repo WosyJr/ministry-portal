@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Without a connection · The Imperial Ministries</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.svg">
+</head>
+<body class="lamplit">
+<div class="wrap">
+  <main>
+    <section style="text-align:center;padding:72px 0">
+      <img src="/favicon.svg" alt="" width="92" height="92" style="opacity:.85;margin-bottom:26px">
+      <h2 style="margin:0 0 14px">The hall cannot be reached</h2>
+      <p class="lede" style="max-width:520px;margin:0 auto 10px">Your machine is without a connection, so the Ministry's doors will not open. Nothing you have written is lost.</p>
+      <p class="hint" style="max-width:520px;margin:0 auto 30px">Anything you laid or sealed while the archives were unreachable is held and will be entered the moment the connection returns.</p>
+      <div class="linkrow" style="justify-content:center">
+        <button class="btn" type="button" onclick="location.reload()">Try the door again</button>
+      </div>
+    </section>
+  </main>
+  <div class="foot">Imperial Province of Skyrim &#10022; Cyrodilic Administration &#10022; Fourth Era</div>
+</div>
+<script>
+(function () {
+  window.addEventListener('online', function () { location.reload(); });
+  setInterval(function () { if (navigator.onLine) location.reload(); }, 8000);
+})();
+</script>
+</body>
+</html>
