@@ -388,6 +388,8 @@ code.pw{font-size:18px;background:#FBF5E6;padding:2px 8px;border:1px solid var(-
 .csf>span{font-weight:600;color:var(--sepia);font-size:14px}
 .csf input[type=text],.csf input[type=number],.csf input[type=search],.csf select,.csf textarea{font-family:var(--body);font-size:16px;padding:7px 10px;border:1px solid var(--line);background:#FBF7EC;color:var(--ink);border-radius:2px;width:100%}
 .csf-wide{grid-column:1/-1}
+code.pickme{display:inline-block;user-select:all;-webkit-user-select:all;padding:5px 9px;border:1px solid var(--line);background:#FBF7EC;border-radius:2px;word-break:break-all;font-size:14px}
+body.arcane code.pickme{background:var(--glass);border-color:var(--aline);color:var(--aink)}
 .csf>span.csfnote{font-weight:400;font-size:13px;line-height:1.45;color:var(--sepia);opacity:.82;margin:-1px 0 0}
 body.arcane .csf>span.csfnote{color:var(--afade);opacity:1}
 @media(max-width:620px){.csgrid{grid-template-columns:1fr}}

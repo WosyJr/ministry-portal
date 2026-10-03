@@ -54,7 +54,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     inProvince(req, res, 'ranks', AV.ranksPage(Ranks.all(), counts(), req.session.csrf, req.user, true)));
 
   app.get('/province/settings', provinceGate, (req, res) =>
-    inProvince(req, res, 'settings', AV.settingsPage(Settings.get(), G.status(), Settings.laws(), req.session.csrf, req.user, res.locals.today, true, { url: res.locals.site, fixed: C.BASE_URL_SET })));
+    inProvince(req, res, 'settings', AV.settingsPage(Settings.get(), G.status(req), Settings.laws(), req.session.csrf, req.user, res.locals.today, true, { url: res.locals.site, fixed: C.BASE_URL_SET })));
 
   app.get('/province/motion', provinceGate, (req, res) =>
     inProvince(req, res, 'motion', AV.motionPage(Settings.get(), res.locals.today, V.seasonOf(res.locals.today))));
@@ -429,7 +429,7 @@ f.writeFileSync('out.json', z.gunzipSync(O.decrypt(b, process.env.OFFSITE_PASSPH
     if (!G.configured()) return res.redirect('/admin/settings');
     const state = crypto.randomBytes(16).toString('hex');
     req.session.googleState = state;
-    res.redirect(G.authUrl(state));
+    res.redirect(G.authUrl(state, req));
   });
   r.post('/google/disconnect', minister, checkCsrf, (req, res) => { G.disconnect(); req.session.flash = { text: 'Google disconnected.' }; res.redirect('/admin/settings'); });
   app.use('/admin', r);
@@ -438,7 +438,7 @@ f.writeFileSync('out.json', z.gunzipSync(O.decrypt(b, process.env.OFFSITE_PASSPH
     try {
       if (!req.query.code || req.query.state !== req.session.googleState) throw new Error('The Google connection could not be verified. Try again.');
       req.session.googleState = null;
-      const out = await G.handleCallback(req.query.code);
+      const out = await G.handleCallback(req.query.code, req);
       if (!G.connected()) throw new Error('Google did not grant lasting access. Remove the app from your Google account permissions and connect again.');
       await G.ensureDocket();
       req.session.flash = { text: 'The Ministry archives are connected' + (out.email ? ' as ' + out.email : '') + '. The live Docket sheet is in Ledgers & Dockets.' };

@@ -117,7 +117,22 @@ module.exports = function (app, { checkCsrf }) {
 
   app.get('/province/staff/items', gate, (req, res) => {
     const flash = req.session.flash; req.session.flash = null;
-    show(req, res, 'items', SRV.itemsPage(srv(req), K.items(), req.session.csrf, flash && flash.text, K.mayAssign(req.user)));
+    const q = String(req.query.q || '').slice(0, 80);
+    const cat = String(req.query.cat || '').slice(0, 60);
+    const from = Math.max(0, Math.min(200000, Number(req.query.from) || 0));
+    const found = K.itemSearch(q, cat, 200, from);
+    show(req, res, 'items', SRV.itemsPage(srv(req), found, req.session.csrf, flash && flash.text, K.mayAssign(req.user), q, cat));
+  });
+
+  app.get('/province/staff/lookup', gate, (req, res) => {
+    const refs = String(req.query.refs || '').split(',').map(r => r.trim()).filter(Boolean).slice(0, 200);
+    const out = {};
+    refs.forEach(r => {
+      const hit = K.lookupId(r);
+      if (hit) out[r] = [hit.name, hit.kind || ''];
+    });
+    res.set('Cache-Control', 'private, max-age=300');
+    res.json(out);
   });
 
   app.post('/province/staff/items', gate, checkCsrf, (req, res) => {
