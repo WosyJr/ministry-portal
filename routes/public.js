@@ -314,8 +314,22 @@ module.exports = (app, { checkCsrf, wrap }) => {
   app.get('/app', (req, res) =>
     res.page({ title: 'Put the Ministry on your machine', body: Policy.installPage() }));
 
-  app.get('/download', (req, res) =>
-    res.page({ title: 'The Ministry on your own machine', body: Policy.downloadPage() }));
+  const Release = require('../lib/release');
+
+  app.get('/download', wrap(async (req, res) => {
+    const found = await Release.latest();
+    res.page({ title: 'The Ministry on your own machine', body: Policy.downloadPage(found, Release.size) });
+  }));
+
+  app.get('/download/MinistryPortalSetup.exe', wrap(async (req, res) => {
+    const found = await Release.latest();
+    if (!found) {
+      req.session.flash = { err: true, text: 'The installer is not published yet. Nothing is wrong with your machine.' };
+      return res.redirect('/download');
+    }
+    Activity.log(req.user, 'took a copy of the desktop app', found.version || '');
+    Release.stream(found, res);
+  }));
 
   const Discord = require('../lib/discord');
 
