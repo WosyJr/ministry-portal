@@ -111,7 +111,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   }));
 
   app.get('/justice/warrants', seeCases, wrap(async (req, res) => {
-    page(res, req, 'Warrants', JV.warrantsPage(req.user, J.warrants().slice().reverse(), req.session.csrf, mayJudge(req.user), J.cases(), benchOfficers()));
+    page(res, req, 'Warrants', JV.warrantsPage(req.user, J.warrants().slice().reverse(), req.session.csrf, mayJudge(req.user), J.cases(), benchOfficers(), J.notices()));
   }));
 
   app.post('/justice/warrants', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
@@ -135,6 +135,44 @@ module.exports = (app, { checkCsrf, wrap }) => {
     J.warrantRemove(String(req.params.id));
     req.session.flash = { text: 'The warrant is struck.' };
     res.redirect('/justice/warrants');
+  }));
+
+
+  app.post('/justice/warrants/:id/notice', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    try {
+      const w = J.warrantGet(String(req.params.id));
+      if (!w) throw new Error('No such warrant.');
+      const n = J.noticePost({
+        ...(req.body || {}),
+        against: (req.body && req.body.against) || w.against,
+        warrantId: w.id,
+        caseId: (req.body && req.body.caseId) || '',
+        hold: (req.body && req.body.hold) || w.hold
+      }, req.user);
+      Activity.log(req.user, 'posted an imperial notice', n.no, n.against);
+      req.session.flash = { text: `${n.no} is posted against ${n.against}.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/justice/warrants');
+  }));
+
+  app.post('/justice/notices/:id', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
+    try {
+      const n = J.noticeUpdate(String(req.params.id), req.body || {}, req.user);
+      req.session.flash = { text: `${n.no} is set down as ${n.status}.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect(String((req.body && req.body.back) || '').startsWith('/justice') ? req.body.back : '/justice/warrants');
+  }));
+
+  app.post('/justice/notices/:id/remove', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
+    J.noticeRemove(String(req.params.id));
+    req.session.flash = { text: 'The notice is taken down.' };
+    res.redirect(String((req.body && req.body.back) || '').startsWith('/justice') ? req.body.back : '/justice/warrants');
+  }));
+
+  app.get('/justice/notices/:id/doc', seeCases, wrap(async (req, res) => {
+    const n = J.noticeGet(String(req.params.id));
+    if (!n) return res.status(404).send('No such notice.');
+    sendDoc(res, JV.noticeDoc(n, n.warrantId ? J.warrantGet(n.warrantId) : null));
   }));
 
   app.get('/justice/calendar', wrap(async (req, res) => {
@@ -622,7 +660,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
   }));
 
   app.get('/justice/wanted', wrap(async (req, res) => {
-    page(res, req, 'Persons Sought', JV.wantedPage(req.user, J.wanted()));
+    page(res, req, 'Persons Sought', JV.wantedPage(req.user, J.wanted(), J.noticesPosted()));
   }));
 
   app.get('/justice/courts', wrap(async (req, res) => {
