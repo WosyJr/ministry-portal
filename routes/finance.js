@@ -140,6 +140,36 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     catch (e) { toMonth(req, res, key, '', e.message); }
   }));
 
+  app.get('/finance/months/:key/split/:groupId', seeLedger, wrap(async (req, res) => {
+    const key = String(req.params.key);
+    const gid = String(req.params.groupId);
+    const sp = F.splitFor(key, gid);
+    if (!sp) return res.say('No such group', 'Nothing in the budget answers to that.', 404);
+    if (!F.splittable(gid)) {
+      return res.say('Nothing to split', 'Nothing is kept under ' + sp.group.name + ', so its draw is not divided.', 404);
+    }
+    page(res, req, sp.group.name + ' \u2014 how the draw is split', FV.splitPage(req.user, sp, req.session.csrf, may(req)));
+  }));
+
+  app.post('/finance/months/:key/split/:groupId', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
+    const key = String(req.params.key);
+    const gid = String(req.params.groupId);
+    try {
+      if (req.body.reset) {
+        F.clearSplit(key, gid);
+        Activity.log(req.user, 'put the split of', (F.groupGet(gid) || {}).name + ' back to automatic');
+        req.session.flash = { text: 'The split is back to going by what each roll costs.' };
+      } else {
+        const sp = F.setSplit(key, gid, req.body, req.user);
+        Activity.log(req.user, 'set how the draw of', (F.groupGet(gid) || {}).name + ' is split');
+        req.session.flash = sp.overspent
+          ? { err: true, text: 'Set down, but this splits ' + sp.over.toLocaleString('en-US') + ' more than the Office draws. Nobody will be paid past the draw.' }
+          : { text: 'The split is set down.' };
+      }
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/months/' + encodeURIComponent(key) + '/split/' + encodeURIComponent(gid));
+  }));
+
   app.post('/finance/months/:key/status', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
     const key = String(req.params.key);
     try {
@@ -338,6 +368,17 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       return res.redirect('/finance/rosters?group=' + encodeURIComponent(r.groupId));
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
     res.redirect('/finance/rosters');
+  }));
+
+  app.post('/finance/muster/note', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
+    const g = String((req.body || {}).group || '');
+    try {
+      const r = F.rollNoteSet(req.body.roll, req.body.name, req.body, req.user);
+      req.session.flash = { text: r.account || r.note
+        ? `What the Treasury keeps against ${String(req.body.name)} is set down.`
+        : `What the Treasury kept against ${String(req.body.name)} is cleared.` };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/rosters?group=' + encodeURIComponent(g));
   }));
 
   app.post('/finance/rosters/:id/remove', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
