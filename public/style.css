@@ -2551,3 +2551,11 @@ body.arcane .codeblock{background:rgba(8,6,22,.6);border:1px solid var(--aline);
 .subfilter.on{background:var(--blood);color:var(--parch);border-color:var(--blood)}
 .subfilter b{color:var(--gold);font-weight:600;margin-left:5px}
 .subfilter.on b{color:#E8CFA0}
+
+.warstat.over{border-color:#9B4A34;background:#F6E6E0}
+.acctbad{color:#8A1E1E}
+.acctbar{height:9px;border:1px solid var(--line);background:var(--parch-2);margin:2px 0 6px;overflow:hidden}
+.acctbar span{display:block;height:100%;background:linear-gradient(90deg,#B89656,#8C6A2F)}
+.acctpct{margin-top:0}
+.acctledger{margin-top:10px}
+.acctledger td.num{font-variant-numeric:tabular-nums}

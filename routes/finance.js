@@ -309,7 +309,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   // The preview is rendered straight off the paste rather than carried in the
   // session: a plan of any size would not fit in a cookie.
   const rosterView = (req, res, groupId, withInactive, gs, preview, pasted) =>
-    page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive, F.musterFor(F.groupGet(groupId)), preview, pasted));
+    page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive, F.musterFor(F.groupGet(groupId)), preview, pasted, F.accountFor(groupId)));
 
   // Making a group for a Ministry that keeps officers but has nobody paying it.
   app.post('/finance/groups/for-roll', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
