@@ -70,18 +70,19 @@ module.exports = (app, { checkCsrf, wrap }) => {
   }));
 
   app.get('/petition', (req, res) => {
-    res.page({ title: 'Petition Box', active: 'petition', body: V.petitionBox(req.session.csrf, null, G.connected() ? '' : 'The Ministry’s rolls are being prepared.', res.locals.today) });
+    res.page({ title: 'Petition Box', active: 'petition', body: V.petitionBox(req.session.csrf, null, '', res.locals.today) });
   });
   app.post('/petition', checkCsrf, wrap(async (req, res) => {
     const b = req.body || {};
     const again = (msg, status = 400) => res.page({ title: 'Petition Box', active: 'petition', flash: { err: true, text: msg }, body: V.petitionBox(req.session.csrf, b, '', res.locals.today) }, status);
     if (b.website) return res.redirect('/petition');
-    if (!G.connected()) return again('The Petition Box is shut for the moment. Seek out a clerk of the Ministry instead.', 503);
     const hold = Ranks.HOLD_BY_ID[b.hold];
     const txt = (k, n) => String(b[k] || '').replace(/\r/g, '').trim().slice(0, n);
     const natures = ['Grievance', 'Request', 'Request for Records', 'License Application', 'Audience with an Officer', 'Public Information', 'Other'];
     if (!txt('name', 120) || !hold || !txt('where', 200) || !natures.includes(b.nature) || txt('statement', 4000).length < 10) return again('Give your name, your Hold, where you may be found, the nature of your petition and your statement.');
-    if (!A.rateLimit('petition|' + req.ip, 3, 60 * 60 * 1000)) return again('The Petition Box is full from your hand for this hour. Return later.', 429);
+    if (!req.session.box) req.session.box = Math.random().toString(36).slice(2, 12);
+    if (!A.rateLimit('petition|' + req.session.box, 6, 60 * 60 * 1000)) return again('You have laid six petitions this hour. Return later, or seek out a clerk of the Ministry.', 429);
+    if (!A.rateLimit('petitionip|' + req.ip, 60, 60 * 60 * 1000)) return again('The Petition Box has taken a great many petitions this hour. Return in a little while.', 429);
     const tp = Records.todayParts();
     const form = BY_KEY.petition;
     const parsed = Records.parseInput(form, {
@@ -93,9 +94,9 @@ module.exports = (app, { checkCsrf, wrap }) => {
       recordDate: tp, sig: [txt('name', 120), '']
     });
     try {
-      const row = await Records.file({ form, parsed, by: null, hold: hold.id, linked: [], status: 'Received', noSeal: true, extraMeta: { publicBox: true } });
+      const row = await Records.file({ form, parsed, by: null, hold: hold.id, linked: [], status: 'Received', noSeal: true, extraMeta: { publicBox: true }, spoolAnyway: true });
       Activity.log(null, 'dropped a petition in the Box', row['Record No'], hold.name);
-      res.page({ title: row['Record No'], active: 'petition', body: V.petitionReceived(row['Record No'], row['Date (4E)']) });
+      res.page({ title: row['Record No'], active: 'petition', body: V.petitionReceived(row['Record No'], row['Date (4E)'], !!row.__held) });
     } catch (e) {
       console.error(e);
       again('The Petition Box could not take your petition just now. Try again in a moment.', 500);
