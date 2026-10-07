@@ -132,6 +132,7 @@ require('./routes/staffroom')(app, ctx);
 require('./routes/war')(app, ctx);
 require('./routes/justice')(app, ctx);
 require('./routes/finance')(app, ctx);
+require('./routes/heraldry')(app, ctx);
 
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 
@@ -149,6 +150,15 @@ app.use((err, req, res, next) => {
 });
 
 U.bootstrap();
+
+try {
+  const Heraldry = require('./lib/heraldry');
+  if (!Heraldry.all().length) {
+    const seedList = require('./data-heraldry-seed.json');
+    const n = Heraldry.seed(seedList);
+    if (n) console.log('Laid the Imperial Ledger of Heraldry: ' + n + ' entries.');
+  }
+} catch (e) { console.error('Ledger of Heraldry not seeded:', e.message); }
 require('./lib/warseed').seedIfEmpty();
 try { require('./lib/offsite').begin(); } catch (_) {}
 try { require('./lib/records'); require('./lib/spool').resume(); } catch (_) {}
