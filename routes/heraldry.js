@@ -1,4 +1,5 @@
 const H = require('../lib/heraldry');
+const G = require('../lib/grants');
 const HV = require('../lib/heraldryviews');
 const A = require('../lib/auth');
 const Ranks = require('../lib/ranks');
@@ -17,6 +18,61 @@ module.exports = (app, { checkCsrf, wrap }) => {
       body: HV.ledger(q, rows, H.summary(), '', mayKeep(req.user))
     });
   });
+
+  app.get('/heraldry/grants', (req, res) => {
+    const keep = mayKeep(req.user);
+    res.page({
+      title: 'Grants of the Ledger',
+      active: 'heraldry',
+      body: HV.grants(keep ? G.sorted() : G.live(), G.summary(), keep, req.session.csrf)
+    });
+  });
+
+  app.get('/heraldry/grants/new', A.gate(mayKeep), (req, res) => {
+    res.page({
+      title: 'Make a grant',
+      active: 'heraldry',
+      body: HV.grantForm(req.session.csrf, H.live(), null)
+    });
+  });
+
+  app.post('/heraldry/grants', A.gate(mayKeep), checkCsrf, wrap((req, res) => {
+    try {
+      const g = G.give(req.body || {}, req.user);
+      Activity.log(req.user, 'granted ' + g.what, g.toName, '');
+      req.session.flash = { text: g.what + ' is granted to ' + g.toName + '.' };
+      return res.redirect('/heraldry/grants');
+    } catch (err) {
+      req.session.flash = { err: true, text: err.message };
+      return res.page({
+        title: 'Make a grant',
+        active: 'heraldry',
+        body: HV.grantForm(req.session.csrf, H.live(), req.body || {})
+      }, 400);
+    }
+  }));
+
+  app.post('/heraldry/grants/:id/revoke', A.gate(mayKeep), checkCsrf, wrap((req, res) => {
+    try {
+      const g = G.revoke(req.params.id, (req.body || {}).why, req.user);
+      Activity.log(req.user, 'revoked a grant', g.toName, '');
+      req.session.flash = { text: 'The grant is revoked.' };
+    } catch (err) {
+      req.session.flash = { err: true, text: err.message };
+    }
+    res.redirect('/heraldry/grants');
+  }));
+
+  app.post('/heraldry/grants/:id/restore', A.gate(mayKeep), checkCsrf, wrap((req, res) => {
+    try {
+      const g = G.restore(req.params.id, req.user);
+      Activity.log(req.user, 'granted again', g.toName, '');
+      req.session.flash = { text: 'It is granted again.' };
+    } catch (err) {
+      req.session.flash = { err: true, text: err.message };
+    }
+    res.redirect('/heraldry/grants');
+  }));
 
   app.get('/heraldry/manage', A.gate(mayKeep), (req, res) => {
     const q = String(req.query.q || '').slice(0, 80);
