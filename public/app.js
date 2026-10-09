@@ -86,3 +86,27 @@
   if (mq && mq.addEventListener) mq.addEventListener('change', label);
   label();
 })();
+
+(function () {
+  var LINES = 7;
+  document.querySelectorAll('.reqcard .pre, .judgment .pre').forEach(function (el) {
+    if (el.closest('.printbody') || el.querySelector('.foldbtn')) return;
+    var lh = parseFloat(getComputedStyle(el).lineHeight) || 24;
+    if (el.scrollHeight <= lh * (LINES + 2)) return;
+    el.classList.add('folded');
+    el.style.setProperty('--fold', (lh * LINES) + 'px');
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn ghost small foldbtn';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.textContent = 'Read it all';
+    el.insertAdjacentElement('afterend', btn);
+    btn.addEventListener('click', function () {
+      var open = el.classList.toggle('open');
+      el.classList.toggle('folded', !open);
+      btn.textContent = open ? 'Fold it up' : 'Read it all';
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (!open) el.scrollIntoView({ block: 'nearest' });
+    });
+  });
+})();

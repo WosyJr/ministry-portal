@@ -4,14 +4,15 @@
   --ink:#2B1B0E;--sepia:#5A4128;--blood:#6B1414;--blood-2:#8A1E1E;--gold:#8C6A2F;--gold-soft:#B89656;--line:#B89A62;
   --quill:#1F2A44;--ok:#3E5A2B;
   --display:"Fondamento","Palatino Linotype","Book Antiqua",Georgia,serif;
-  --body:"Literata","Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+  --body:"IBM Plex Sans","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --read:"Literata","Iowan Old Style","Palatino Linotype",Georgia,serif;
   --print-body:"EB Garamond",Garamond,"Times New Roman",Georgia,serif;
   --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
 body.printbody{--body:var(--print-body);font-size:17px;line-height:1.55}
 *{box-sizing:border-box}
 html{background:var(--parch)}
-body{margin:0;background:var(--parch);color:var(--ink);font-family:var(--body);font-size:17.5px;line-height:1.65;padding-inline:16px;padding-block:0 48px;
+body{margin:0;background:var(--parch);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.65;padding-inline:16px;padding-block:0 48px;
   background-image:radial-gradient(ellipse at 20% 0%,rgba(255,250,235,.55),transparent 60%),radial-gradient(ellipse at 90% 100%,rgba(140,106,47,.12),transparent 55%);background-attachment:fixed}
 a{color:var(--blood)}
 a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--blood);outline-offset:2px}
@@ -2789,3 +2790,43 @@ html[data-theme="dark"] .findbox input[type=search]{background:#140F09;color:var
 html[data-theme="dark"] .bookart{background:#231A11}
 html[data-theme="dark"] .book .pen.grave dt{color:#D98A54}
 @media (prefers-color-scheme:dark){html:not([data-theme="light"]) .findbox input[type=search]{background:#140F09;color:var(--ink)}html:not([data-theme="light"]) .bookart{background:#231A11}html:not([data-theme="light"]) .book .pen.grave dt{color:#D98A54}}
+.pre.folded{max-height:var(--fold,170px);overflow:hidden;position:relative;-webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 44px),transparent)}
+.foldbtn{margin:4px 0 12px}
+@media print{.pre.folded{max-height:none;-webkit-mask-image:none;mask-image:none}.foldbtn{display:none}}
+
+.lede,.hint,.admin,.minister,.small,.foot{font-weight:400}
+.lede{font-style:normal;font-size:17px}
+.hint{font-style:normal}
+main .reqcard .pre,main .post .pre,.judgment .pre,.bookart p,.book p{font-size:16.5px}
+.sheetbody,.scroll,.printbody{font-family:var(--print-body)}
+html[data-theme="dark"] body{--ink:#DFD3BA;--sepia:#B8A27A}
+html[data-theme="dark"] .mast h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3{color:#E6A896}
+@media (prefers-color-scheme:dark){html:not([data-theme="light"]) body{--ink:#DFD3BA;--sepia:#B8A27A}html:not([data-theme="light"]) .mast h1,html:not([data-theme="light"]) h2,html:not([data-theme="light"]) h3{color:#E6A896}}
+
+/* night, second pass */
+
+html[data-theme="dark"] .opts label,html[data-theme="dark"] .qopt,html[data-theme="dark"] code.pw,html[data-theme="dark"] code.pickme,html[data-theme="dark"] .qnum,html[data-theme="dark"] .lettertargets,html[data-theme="dark"] .serverbar .srv.on,html[data-theme="dark"] .warstat.over,html[data-theme="dark"] details.edit[open],html[data-theme="dark"] .handswatch{background:#231A11;color:var(--ink);border-color:var(--line)}
+html[data-theme="dark"] .opts label:has(input:checked){background:#8E1B1B;color:#FFF6E6;border-color:#B23030}
+html[data-theme="dark"] .finder input,html[data-theme="dark"] .search-box input,html[data-theme="dark"] .filters input[type=search],html[data-theme="dark"] .inline-form input,html[data-theme="dark"] .rank-form input[type=text],html[data-theme="dark"] .rank-form textarea,html[data-theme="dark"] .cslink input,html[data-theme="dark"] .rosterbar input[type=search],html[data-theme="dark"] #jumpinput,html[data-theme="dark"] input[type=file],html[data-theme="dark"] .sel{background:#140F09!important;color:#ECDFC2!important;border-color:#5C4729!important}
+html[data-theme="dark"] .docview,html[data-theme="dark"] .scroll,html[data-theme="dark"] .idcard{background:#F3E9D2;color:#2B1B0E;--ink:#2B1B0E;--sepia:#5A4128;--blood:#6B1414;--gold:#8C6A2F;--line:#B89A62}
+html[data-theme="dark"] .noticebox,html[data-theme="dark"] .verified,html[data-theme="dark"] .appnote,html[data-theme="dark"] .installbar,html[data-theme="dark"] .jumphint{background:#231A11;color:var(--ink)}
+html[data-theme="dark"] .warrole.tone-quill,html[data-theme="dark"] .warrole{background:#231A11}
+html[data-theme="dark"] .ledger tbody tr:hover{background:rgba(255,220,160,.04)}
+html[data-theme="dark"] .chip.ok{color:#9CC283;border-color:#3E5A2B}
+html[data-theme="dark"] .chip.warn,html[data-theme="dark"] .chip.bad{color:#F0A5AE;border-color:#7E1621}
+
+@media (prefers-color-scheme:dark){
+
+html:not([data-theme="light"]) .opts label,html:not([data-theme="light"]) .qopt,html:not([data-theme="light"]) code.pw,html:not([data-theme="light"]) code.pickme,html:not([data-theme="light"]) .qnum,html:not([data-theme="light"]) .lettertargets,html:not([data-theme="light"]) .serverbar .srv.on,html:not([data-theme="light"]) .warstat.over,html:not([data-theme="light"]) details.edit[open],html:not([data-theme="light"]) .handswatch{background:#231A11;color:var(--ink);border-color:var(--line)}
+html:not([data-theme="light"]) .opts label:has(input:checked){background:#8E1B1B;color:#FFF6E6;border-color:#B23030}
+html:not([data-theme="light"]) .finder input,html:not([data-theme="light"]) .search-box input,html:not([data-theme="light"]) .filters input[type=search],html:not([data-theme="light"]) .inline-form input,html:not([data-theme="light"]) .rank-form input[type=text],html:not([data-theme="light"]) .rank-form textarea,html:not([data-theme="light"]) .cslink input,html:not([data-theme="light"]) .rosterbar input[type=search],html:not([data-theme="light"]) #jumpinput,html:not([data-theme="light"]) input[type=file],html:not([data-theme="light"]) .sel{background:#140F09!important;color:#ECDFC2!important;border-color:#5C4729!important}
+html:not([data-theme="light"]) .docview,html:not([data-theme="light"]) .scroll,html:not([data-theme="light"]) .idcard{background:#F3E9D2;color:#2B1B0E;--ink:#2B1B0E;--sepia:#5A4128;--blood:#6B1414;--gold:#8C6A2F;--line:#B89A62}
+html:not([data-theme="light"]) .noticebox,html:not([data-theme="light"]) .verified,html:not([data-theme="light"]) .appnote,html:not([data-theme="light"]) .installbar,html:not([data-theme="light"]) .jumphint{background:#231A11;color:var(--ink)}
+html:not([data-theme="light"]) .warrole.tone-quill,html:not([data-theme="light"]) .warrole{background:#231A11}
+html:not([data-theme="light"]) .ledger tbody tr:hover{background:rgba(255,220,160,.04)}
+html:not([data-theme="light"]) .chip.ok{color:#9CC283;border-color:#3E5A2B}
+html:not([data-theme="light"]) .chip.warn,html:not([data-theme="light"]) .chip.bad{color:#F0A5AE;border-color:#7E1621}
+
+}html[data-theme="dark"] .jumpbtn{background:#231A11;color:var(--ink);border-color:var(--line)}
+html[data-theme="dark"] .jumpbtn .key{border-color:var(--line)}
+@media (prefers-color-scheme:dark){html:not([data-theme="light"]) .jumpbtn{background:#231A11;color:var(--ink);border-color:var(--line)}html:not([data-theme="light"]) .jumpbtn .key{border-color:var(--line)}}
