@@ -783,9 +783,27 @@
       gust += (gustTo - gust) * 0.004;
     }
 
+    var keep = [], keepT = 0;
+    function clear() {
+      keep = [];
+      var sheets = doc.querySelectorAll('.wrap > main, nav.tabs');
+      for (var i = 0; i < sheets.length && i < 60; i++) {
+        var r = sheets[i].getBoundingClientRect();
+        if (r.bottom < 0 || r.top > H) continue;
+        keep.push([r.left, r.top, r.right, r.bottom]);
+      }
+    }
+    function covered(x, y) {
+      for (var i = 0; i < keep.length; i++) {
+        var k = keep[i];
+        if (x >= k[0] && x <= k[2] && y >= k[1] && y <= k[3]) return true;
+      }
+      return false;
+    }
     function draw() {
       wind();
       g.clearRect(0, 0, W, H);
+      if ((keepT -= 1) <= 0) { clear(); keepT = 12; }
       for (var i = 0; i < bits.length; i++) {
         var b = bits[i];
         b.y += b.vy * (season === 'rain' ? (0.7 + gust * 0.5) : 1);
@@ -796,6 +814,7 @@
         if (b.y < -20) { b.y = H + 20; b.x = Math.random() * W; }
         if (b.x < -20) b.x = W + 20;
         if (b.x > W + 20) b.x = -20;
+        if (season !== 'rain' && covered(b.x, b.y)) continue;
         if (season === 'rain') {
           g.beginPath();
           g.strokeStyle = 'rgba(' + b.col + ',' + b.a.toFixed(2) + ')';
