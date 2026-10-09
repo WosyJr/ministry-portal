@@ -41,6 +41,7 @@ Writs sealed by an officer carry the Ministry’s wax seal. The Minister may upl
 | `SESSION_SECRET` | Any long random string |
 | `DATA_DIR` | `/data` |
 | `AUDIT_KEY` | Any long random string, set to the **same value** on the ministry, penoc and bruma services. Lets **Administration → Every Hand** read the other two halls' logs. |
+| (the same `AUDIT_KEY`) | Also lets PenOc read this site's warrants, inquisitions and Imperial Notices from `/justice/link.json`, so a person file on PenOc shows the Bench's paper on that name. |
 | `PENOC_URL`, `BRUMA_URL` | Only if those sites move. Default to penoc-production.up.railway.app and countyofbruma.com. |
 | `NODE_ENV` | `production` |
 | `ADMIN_USERNAME` | Username for the first Minister account, e.g. `nimmi` |

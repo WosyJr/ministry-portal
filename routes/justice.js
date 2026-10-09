@@ -659,6 +659,30 @@ module.exports = (app, { checkCsrf, wrap }) => {
     page(res, req, 'Verify a Paper', JV.verifyPage(req.user, code, result));
   }));
 
+  app.get('/justice/link.json', (req, res) => {
+    const key = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const C = require('../lib/config');
+    if (!C.AUDIT_KEY || !key || key !== C.AUDIT_KEY) return res.status(404).type('text/plain').send('');
+    res.setHeader('Cache-Control', 'no-store');
+    const site = res.locals.site || '';
+    const warrants = J.warrants().map(w => ({
+      id: w.id, no: w.no, kind: w.kind, against: w.against, status: w.status, hold: w.hold || '', caseNo: w.caseNo || '',
+      issuedAt: w.issuedAt, issuedBy: w.issuedBy || '', toWhom: w.toWhom || '', expires: w.expires || '',
+      servedBy: w.servedBy || '', servedAt: w.servedAt || '', note: w.note || '', reason: String(w.reason || '').slice(0, 600),
+      link: '/justice/warrants/' + encodeURIComponent(w.id) + '/doc'
+    }));
+    const inquisitions = J.inquisitions().map(i => ({
+      id: i.id, no: i.no, subject: i.subject, into: i.into || '', status: i.status, hold: i.hold || '', caseNo: i.caseNo || '',
+      at: i.at, byName: i.byName || '', scope: String(i.scope || '').slice(0, 600), conclusion: String(i.conclusion || '').slice(0, 600),
+      link: '/justice/inquisitions/' + encodeURIComponent(i.id)
+    }));
+    const notices = J.notices().map(n => ({
+      id: n.id, no: n.no, against: n.against, crime: n.crime || '', status: n.status, bounty: Number(n.bounty) || 0, condition: n.condition || '',
+      issuedAt: n.issuedAt, warrantNo: n.warrantNo || '', lastSeen: n.lastSeen || '', link: '/justice/notices/' + encodeURIComponent(n.id) + '/doc'
+    }));
+    res.json({ site: 'ministry', base: site, at: new Date().toISOString(), warrants, inquisitions, notices });
+  });
+
   app.get('/justice/wanted', wrap(async (req, res) => {
     page(res, req, 'Persons Sought', JV.wantedPage(req.user, J.wanted(), J.noticesPosted()));
   }));

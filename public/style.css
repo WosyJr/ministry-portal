@@ -2747,3 +2747,45 @@ html[data-theme="dark"] table.audit{background:#1C150E}
 html[data-theme="dark"] table.audit th{background:#2B2014}
 html[data-theme="dark"] table.audit th,html[data-theme="dark"] table.audit td{border-bottom-color:rgba(212,176,103,.18)}
 @media (prefers-color-scheme:dark){html:not([data-theme="light"]) table.audit{background:#1C150E}html:not([data-theme="light"]) table.audit th{background:#2B2014}html:not([data-theme="light"]) table.audit th,html:not([data-theme="light"]) table.audit td{border-bottom-color:rgba(212,176,103,.18)}}
+
+.findbox{display:grid;gap:8px;max-width:560px;margin:18px 0 6px}
+.findbox label{display:grid;gap:7px}
+.findlabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+.findbox input[type=search]{font-family:var(--body);font-size:16.5px;padding:11px 13px;border:1px solid var(--line);background:#FBF7EC;color:var(--ink);border-radius:2px;width:100%}
+.findsay{margin:0;font-size:14px;color:var(--sepia);font-style:italic;min-height:1.4em}
+.finding [data-finditem][hidden],.finding [data-findgroup][hidden]{display:none}
+
+.bookhead .eyebrow{margin-bottom:6px}
+.bookwrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:clamp(20px,4vw,48px);align-items:start;margin-top:6px}
+.booktoc{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto;font-size:14px;border-right:1px solid var(--line);padding-right:18px}
+.booktoc ol{list-style:none;margin:0;padding:0}
+.booktoc>ol>li{margin-bottom:12px}
+.booktoc>ol>li>a{font-family:var(--display);font-size:16px;color:var(--blood);text-decoration:none}
+.booktoc ol ol{padding-left:12px;margin-top:5px;display:grid;gap:4px}
+.booktoc ol ol a{color:var(--sepia);text-decoration:none}
+.booktoc a:hover{color:var(--blood);text-decoration:underline}
+.book{max-width:76ch;min-width:0}
+.book section{scroll-margin-top:20px}
+.bookparth{font-size:clamp(28px,3.6vw,38px);margin:40px 0 14px;padding-top:26px;border-top:2px solid var(--blood)}
+.bookpart:first-child .bookparth{margin-top:0;padding-top:0;border-top:0}
+.bookparth a,.booksecth a,.bookarth{text-decoration:none;color:inherit}
+.booksecth{font-size:23px;margin:30px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.bookparth small,.booksecth small{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sepia);margin-left:10px;vertical-align:middle;font-style:normal}
+.bookart{border:1px solid var(--line);background:var(--paper);padding:16px 20px;margin:0 0 12px;scroll-margin-top:20px}
+.bookart:target{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.bookarth{font-family:var(--display);font-weight:400;font-size:20px;margin:0 0 8px;color:var(--blood);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.bookno{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+.bookart p{margin:0 0 10px;max-width:68ch}
+.bookart p:last-child{margin-bottom:0}
+.book .pens{margin:10px 0 0;display:grid;gap:6px}
+.book .pen{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:baseline}
+.book .pen dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--sepia)}
+.book .pen dd{margin:0;font-size:15px}
+.book .pen.capital dt,.book .pen.high dt,.book .pen.punishment dt{color:var(--blood)}
+.book .pen.grave dt,.book .pen.medium dt{color:#A8641E}
+.book p.bookintro{max-width:68ch}
+@media (max-width:860px){.bookwrap{grid-template-columns:1fr}.booktoc{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line);padding:0 0 14px}}
+html[data-theme="dark"] .findbox input[type=search]{background:#140F09;color:var(--ink)}
+html[data-theme="dark"] .bookart{background:#231A11}
+html[data-theme="dark"] .book .pen.grave dt{color:#D98A54}
+@media (prefers-color-scheme:dark){html:not([data-theme="light"]) .findbox input[type=search]{background:#140F09;color:var(--ink)}html:not([data-theme="light"]) .bookart{background:#231A11}html:not([data-theme="light"]) .book .pen.grave dt{color:#D98A54}}
