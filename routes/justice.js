@@ -680,7 +680,12 @@ module.exports = (app, { checkCsrf, wrap }) => {
       id: n.id, no: n.no, against: n.against, crime: n.crime || '', status: n.status, bounty: Number(n.bounty) || 0, condition: n.condition || '',
       issuedAt: n.issuedAt, warrantNo: n.warrantNo || '', lastSeen: n.lastSeen || '', link: '/justice/notices/' + encodeURIComponent(n.id) + '/doc'
     }));
-    res.json({ site: 'ministry', base: site, at: new Date().toISOString(), warrants, inquisitions, notices });
+    const cases = J.cases().filter(c => !c.sealed).map(c => ({
+      id: c.id, no: c.no, kind: (J.KIND_BY_ID[c.kind] || {}).name || c.kind, subject: c.subject, accuser: c.accuser || '', accused: c.accused || '',
+      status: c.status, hold: c.hold || '', at: c.at, finding: c.judgment && c.judgment.finding ? c.judgment.finding : '',
+      link: '/justice/cases/' + encodeURIComponent(c.id)
+    }));
+    res.json({ site: 'ministry', base: site, at: new Date().toISOString(), warrants, inquisitions, notices, cases });
   });
 
   app.get('/justice/wanted', wrap(async (req, res) => {
