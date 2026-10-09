@@ -60,6 +60,18 @@ module.exports = (app, { checkCsrf, wrap }) => {
   app.get('/province/motion', provinceGate, (req, res) =>
     inProvince(req, res, 'motion', AV.motionPage(Settings.get(), res.locals.today, V.seasonOf(res.locals.today))));
 
+  app.get('/province/audit', provinceGate, wrap(async (req, res) => {
+    const data = await require('../lib/audit').gather(req.query.days);
+    inProvince(req, res, 'audit', require('../lib/auditviews').auditPage(data, req.query, req.session.csrf));
+  }));
+
+  app.get('/audit.json', (req, res) => {
+    const key = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!C.AUDIT_KEY || !key || key !== C.AUDIT_KEY) return res.status(404).type('text/plain').send('');
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ site: 'ministry', name: 'The Ministries', events: require('../lib/audit').own(req.query.since, req.query.limit) });
+  });
+
   app.get('/province/forms', provinceGate, (req, res) =>
     inProvince(req, res, 'forms', AV.formsPage(Forms.listCustom(), C.FOLDER_NAMES, Forms.DEPTS, req.session.csrf, req.user, null, true)));
 

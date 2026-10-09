@@ -60,3 +60,29 @@
 
   window.addEventListener('appinstalled', function () { hide(true); });
 })();
+
+(function () {
+  var root = document.documentElement;
+  var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  function night() {
+    var t = root.getAttribute('data-theme');
+    if (t === 'dark') return true;
+    if (t === 'light') return false;
+    return !!(mq && mq.matches);
+  }
+  function label() {
+    var n = night();
+    document.querySelectorAll('[data-theme-toggle] .themelabel').forEach(function (el) { el.textContent = n ? 'Day' : 'Night'; });
+    document.querySelectorAll('[data-theme-toggle]').forEach(function (b) { b.setAttribute('aria-pressed', n ? 'true' : 'false'); });
+  }
+  document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var to = night() ? 'light' : 'dark';
+      root.setAttribute('data-theme', to);
+      try { localStorage.setItem('ministry-theme', to); } catch (e) {}
+      label();
+    });
+  });
+  if (mq && mq.addEventListener) mq.addEventListener('change', label);
+  label();
+})();

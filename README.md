@@ -40,6 +40,8 @@ Writs sealed by an officer carry the Ministry’s wax seal. The Minister may upl
 | `BASE_URL` | Your Railway domain, e.g. `https://ministry.up.railway.app` |
 | `SESSION_SECRET` | Any long random string |
 | `DATA_DIR` | `/data` |
+| `AUDIT_KEY` | Any long random string, set to the **same value** on the ministry, penoc and bruma services. Lets **Administration → Every Hand** read the other two halls' logs. |
+| `PENOC_URL`, `BRUMA_URL` | Only if those sites move. Default to penoc-production.up.railway.app and countyofbruma.com. |
 | `NODE_ENV` | `production` |
 | `ADMIN_USERNAME` | Username for the first Minister account, e.g. `nimmi` |
 | `ADMIN_PASSWORD` | Password for that account (10+ characters). Used only when no accounts exist yet |
