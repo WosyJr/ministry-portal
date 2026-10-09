@@ -10,6 +10,8 @@ module.exports = (app, { checkCsrf, wrap }) => {
   const page = (res, req, title, body) => res.page({ title, active: 'justice', body, justice: true });
 
   const seeCases = A.need('juscases', 'jusdesk');
+  const byKey = req => { const C = require('../lib/config'); const key = String(req.headers.authorization || '').replace(/^Bearer\s+/i, ''); return !!(C.AUDIT_KEY && key && key === C.AUDIT_KEY); };
+  const seeOrKey = (req, res, next) => (byKey(req) ? next() : seeCases(req, res, next));
   const mayFile = u => !!u && (u.all || Ranks.can(u, 'jusfile'));
   const mayJudge = u => !!u && (u.all || Ranks.can(u, 'jusjudge'));
   const mayComplaints = u => !!u && (u.all || Ranks.can(u, 'juscomplaints') || Ranks.can(u, 'jusfile'));
@@ -123,12 +125,24 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect('/justice/warrants');
   }));
 
+  app.get('/justice/warrants/:id', seeCases, wrap(async (req, res) => {
+    const w = J.warrantGet(String(req.params.id));
+    if (!w) return res.say('No such warrant', 'No warrant of the Bench answers to that.', 404);
+    page(res, req, w.no, JV.warrantPage(req.user, w, w.offenceId ? J.offenceGet(w.offenceId) : null, req.session.csrf, { file: mayFile(req.user), judge: mayJudge(req.user) }, J.notices(), J.cases()));
+  }));
+
+  app.get('/justice/notices/:id', seeCases, wrap(async (req, res) => {
+    const n = J.noticeGet(String(req.params.id));
+    if (!n) return res.say('No such notice', 'No Imperial Notice answers to that.', 404);
+    page(res, req, n.no, JV.noticePage(req.user, n, n.warrantId ? J.warrantGet(n.warrantId) : null, req.session.csrf, { file: mayFile(req.user), judge: mayJudge(req.user) }));
+  }));
+
   app.post('/justice/warrants/:id', seeCases, needFile, checkCsrf, wrap(async (req, res) => {
     try {
       const w = J.warrantUpdate(String(req.params.id), req.body || {}, req.user);
       req.session.flash = { text: `${w.no} is set down as ${w.status}.` };
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
-    res.redirect('/justice/warrants');
+    res.redirect(req.get('referer') && /\/justice\/warrants\/[^/]+$/.test(req.get('referer')) ? '/justice/warrants/' + encodeURIComponent(req.params.id) : '/justice/warrants');
   }));
 
   app.post('/justice/warrants/:id/remove', seeCases, needJudge, checkCsrf, wrap(async (req, res) => {
@@ -169,7 +183,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.redirect(String((req.body && req.body.back) || '').startsWith('/justice') ? req.body.back : '/justice/warrants');
   }));
 
-  app.get('/justice/notices/:id/doc', seeCases, wrap(async (req, res) => {
+  app.get('/justice/notices/:id/doc', seeOrKey, wrap(async (req, res) => {
     const n = J.noticeGet(String(req.params.id));
     if (!n) return res.status(404).send('No such notice.');
     sendDoc(res, JV.noticeDoc(n, n.warrantId ? J.warrantGet(n.warrantId) : null));
@@ -389,7 +403,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     } catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
-  app.get('/justice/inquisitions/:id/commission/doc', seeCases, wrap(async (req, res, next) => {
+  app.get('/justice/inquisitions/:id/commission/doc', seeOrKey, wrap(async (req, res, next) => {
     const i = J.inqGet(String(req.params.id));
     if (!i || !i.commission) return next();
     res.set('Content-Type', 'text/html; charset=utf-8');
@@ -441,7 +455,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
     } catch (e) { backInq(req, res, id, '', e.message); }
   }));
 
-  app.get('/justice/inquisitions/:id/report/doc', seeCases, wrap(async (req, res, next) => {
+  app.get('/justice/inquisitions/:id/report/doc', seeOrKey, wrap(async (req, res, next) => {
     const i = J.inqGet(String(req.params.id));
     if (!i || !i.report || typeof i.report !== 'object' || !i.report.facts) return next();
     res.set('Content-Type', 'text/html; charset=utf-8');
@@ -598,13 +612,28 @@ module.exports = (app, { checkCsrf, wrap }) => {
 
   const sendDoc = (res, html) => { res.set('Content-Type', 'text/html; charset=utf-8'); res.send(html); };
 
-  app.get('/justice/warrants/:id/doc', seeCases, wrap(async (req, res) => {
+  app.get('/justice/warrants/:id/doc', seeOrKey, wrap(async (req, res) => {
     const w = J.warrantGet(String(req.params.id));
     if (!w) return res.status(404).send('No such warrant.');
     sendDoc(res, JV.warrantDoc(w, w.offenceId ? J.offenceGet(w.offenceId) : null));
   }));
 
-  app.get('/justice/cases/:id/judgment/doc', seeCases, wrap(async (req, res) => {
+  app.get('/justice/cases/:id/pack', seeCases, wrap(async (req, res) => {
+    const c = J.caseGet(String(req.params.id));
+    if (!c) return res.status(404).send('No such matter.');
+    const no = String(c.no).toLowerCase();
+    const parts = {
+      warrants: J.warrants().filter(w => String(w.caseNo || '').toLowerCase() === no),
+      notices: J.notices().filter(n => String(n.caseNo || '').toLowerCase() === no),
+      custody: J.custody().filter(x => String(x.caseNo || '').toLowerCase() === no),
+      exhibits: J.exhibitsFor(c.no), dues: J.duesFor(c.no), sentences: J.sentencesFor(c.no),
+      offenceOf: w => (w.offenceId ? J.offenceGet(w.offenceId) : null), owingOf: J.owingOf, paidOf: J.paidOf
+    };
+    Activity.log(req.user, 'made the pack of a matter', c.no);
+    sendDoc(res, JV.casePack(req.user, c, parts, res.locals.today));
+  }));
+
+  app.get('/justice/cases/:id/judgment/doc', seeOrKey, wrap(async (req, res) => {
     const c = J.caseGet(String(req.params.id));
     if (!c || !c.judgment || !c.judgment.given) return res.status(404).send('No judgment has been given upon that matter.');
     sendDoc(res, JV.judgmentDoc(c));
@@ -671,8 +700,21 @@ module.exports = (app, { checkCsrf, wrap }) => {
       servedBy: w.servedBy || '', servedAt: w.servedAt || '', note: w.note || '', reason: String(w.reason || '').slice(0, 600),
       link: '/justice/warrants/' + encodeURIComponent(w.id) + '/doc'
     }));
+    const allCases = J.cases();
+    const personsOf = i => {
+      const seen = new Map();
+      const add = n => { const k = String(n || '').replace(/\s+/g, ' ').trim(); if (k && !seen.has(k.toLowerCase())) seen.set(k.toLowerCase(), k); };
+      add(i.into);
+      (i.statements || []).forEach(s => add(s.from));
+      if (i.caseNo) {
+        const c = allCases.find(x => !x.sealed && String(x.no || '').toLowerCase() === String(i.caseNo).toLowerCase());
+        if (c) { add(c.accused); add(c.accuser); }
+      }
+      return Array.from(seen.values());
+    };
     const inquisitions = J.inquisitions().map(i => ({
-      id: i.id, no: i.no, subject: i.subject, into: i.into || '', status: i.status, hold: i.hold || '', caseNo: i.caseNo || '',
+      id: i.id, no: i.no, subject: i.subject, into: i.into || '', persons: personsOf(i), status: i.status, hold: i.hold || '', caseNo: i.caseNo || '',
+      commission: !!i.commission, report: !!(i.report && typeof i.report === 'object' && i.report.facts),
       at: i.at, byName: i.byName || '', scope: String(i.scope || '').slice(0, 600), conclusion: String(i.conclusion || '').slice(0, 600),
       link: '/justice/inquisitions/' + encodeURIComponent(i.id)
     }));
@@ -682,10 +724,12 @@ module.exports = (app, { checkCsrf, wrap }) => {
     }));
     const cases = J.cases().filter(c => !c.sealed).map(c => ({
       id: c.id, no: c.no, kind: (J.KIND_BY_ID[c.kind] || {}).name || c.kind, subject: c.subject, accuser: c.accuser || '', accused: c.accused || '',
-      status: c.status, hold: c.hold || '', at: c.at, finding: c.judgment && c.judgment.finding ? c.judgment.finding : '',
+      status: c.status, hold: c.hold || '', at: c.at, finding: c.judgment && c.judgment.finding ? c.judgment.finding : '', judged: !!(c.judgment && c.judgment.given),
       link: '/justice/cases/' + encodeURIComponent(c.id)
     }));
-    res.json({ site: 'ministry', base: site, at: new Date().toISOString(), warrants, inquisitions, notices, cases });
+    const Settings = require('../lib/settings');
+    const cal = Object.assign({ year: C.CURRENT_YEAR }, (Settings.get() || {}).calendar || {});
+    res.json({ site: 'ministry', base: site, at: new Date().toISOString(), calendar: cal, today: Settings.today(), warrants, inquisitions, notices, cases });
   });
 
   app.get('/justice/wanted', wrap(async (req, res) => {

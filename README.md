@@ -66,3 +66,12 @@ The first connection creates **Ministry Administrative Docket (Live)** in *Ledge
 npm install
 ADMIN_USERNAME=nimmi ADMIN_PASSWORD=choose-a-long-password npm start
 ```
+
+## Added lately
+
+- Judgments, warrants and Imperial Notices draw as paper on their own record pages (`/justice/warrants/:id`, `/justice/notices/:id`, the judgment on a matter's page), with Save as picture; parchment stays parchment at night.
+- **Make the pack** on a matter: every paper on it behind a cover sheet and contents (`/justice/cases/:id/pack`), to print or save as one PDF.
+- My Desk is three lanes of cards — yours to do, waiting on others, falling due; pressing = older than three days or due within a day.
+- The Gazette drafts itself from the day after the last issue: judgments, warrants and notices from the Bench join notices, sealed papers, appointments and licences. Inquisitions are never gathered.
+- Parties get the line: everything the Bench has written that names them, in order, with gaps marked.
+- `/justice/link.json` carries the Ministry's calendar and, per inquisition, the people it names; the printable papers also answer to `Authorization: Bearer AUDIT_KEY` so PenOc can show them to officers with no Ministry login.

@@ -772,7 +772,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     } catch (_) {}
     const Lapse = require('../lib/lapse');
     try { Lapse.sweep(rows, Records.meta, (no, st) => Records.setStatus(no, st), (who, text, link) => Notify.notifyUser(who, text, link)); } catch (_) {}
-    return Desk.gather(u, rows, { week, letters: Letters.waitingFor(u), due: Lapse.comingDue(rows, Records.meta, u) });
+    return Desk.gather(u, rows, { week, letters: Letters.waitingFor(u), due: Lapse.comingDue(rows, Records.meta, u), meta: Records.meta });
   };
 
   r.get('/desk', wrap(async (req, res) => {
@@ -786,8 +786,8 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     try {
       Lapse.sweep(rows, Records.meta, (no, st) => Records.setStatus(no, st), (who, text, link) => Notify.notifyUser(who, text, link));
     } catch (_) {}
-    const d = Desk.gather(req.user, rows, { week, letters: Letters.waitingFor(req.user), due: Lapse.comingDue(rows, Records.meta, req.user) });
-    res.page({ title: 'Your Desk', active: 'deskfull', ...branchFlags(req.user), body: LV.deskFull(req.user, d) });
+    const d = Desk.gather(req.user, rows, { week, letters: Letters.waitingFor(req.user), due: Lapse.comingDue(rows, Records.meta, req.user), meta: Records.meta });
+    res.page({ title: 'Your Desk', active: 'deskfull', ...branchFlags(req.user), body: LV.deskFull(req.user, d, req.session.csrf) });
   }));
 
   const Guide = require('../lib/guide');
@@ -1082,11 +1082,15 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
       return res.page({ title: 'The Gazette', active: 'gazette', body: GazV.managePage(Gaz.issues(), req.session.csrf) });
     }
     const to = String(req.query.to || isoDay(Date.now()));
-    const from = String(req.query.from || isoDay(Date.now() - 7 * 86400000));
+    const last = Gaz.latest();
+    const since = last && last.to ? isoDay(Date.parse(last.to + 'T00:00:00') + 86400000) : '';
+    const from = String(req.query.from || since || isoDay(Date.now() - 7 * 86400000));
     const rows = (await Records.visible(req.user)) || [];
     let roll = [];
     try { roll = Roll.all(); } catch (_) {}
-    const draft = Gaz.draftFor(rows, from, to, { roll }, res.locals.today, Gaz.nextNo());
+    let bench = {};
+    try { const J = require('../lib/justice'); bench = { judgments: J.cases(), warrants: J.warrants(), notices: J.notices() }; } catch (_) {}
+    const draft = Gaz.draftFor(rows, from, to, Object.assign({ roll }, bench), res.locals.today, Gaz.nextNo());
     res.page({ title: 'Set an Issue', active: 'gazette', body: GazV.editPage(draft, req.session.csrf, true, { from, to }) });
   }));
 
