@@ -496,6 +496,101 @@ module.exports = (app, { checkCsrf, wrap }) => {
     backInq(req, res, id, 'Struck.');
   }));
 
+  app.post('/justice/inquisitions/:id/lead', seeCases, needMinister, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const i = J.inqSetLead(id, (req.body || {}).lead, req.user);
+      Activity.log(req.user, 'set the lead Inquisitor', i.no, i.lead || 'none');
+      backInq(req, res, id, i.lead
+        ? `${i.lead} leads ${i.no}.${(i.granted || []).length ? ' They are now assigned to it and may see it.' : ''}`
+        : `${i.no} has no lead set by hand; the first Inquisitor named on the Commission leads it.`);
+    } catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  app.post('/justice/inquisitions/:id/suspect', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const { i, s } = J.inqSuspectSave(id, '', req.body || {}, req.user);
+      Activity.log(req.user, 'described a suspect', i.no, 'Suspect ' + J.roman(s.n));
+      backInq(req, res, id, `Suspect ${J.roman(s.n)} is set down.`);
+    } catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  app.post('/justice/inquisitions/:id/suspect/:sid', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const { s } = J.inqSuspectSave(id, String(req.params.sid), req.body || {}, req.user);
+      backInq(req, res, id, `Suspect ${J.roman(s.n)} is amended.`);
+    } catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  app.post('/justice/inquisitions/:id/suspect/:sid/remove', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    J.inqSuspectRemove(id, String(req.params.sid));
+    backInq(req, res, id, 'The suspect is struck.');
+  }));
+
+  app.post('/justice/inquisitions/:id/evidence', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const { i, e } = J.inqEvidenceAdd(id, req.body || {}, req.user);
+      Activity.log(req.user, 'entered evidence', i.no, 'Exhibit ' + e.letter);
+      backInq(req, res, id, `Exhibit ${e.letter} is entered.`);
+    } catch (e) { backInq(req, res, id, '', e.message); }
+  }));
+
+  app.post('/justice/inquisitions/:id/evidence/:eid/withdraw', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
+    const id = String(req.params.id);
+    const i = J.inqEvidenceWithdraw(id, String(req.params.eid), req.user);
+    if (i) Activity.log(req.user, 'withdrew evidence', i.no);
+    backInq(req, res, id, 'The exhibit is withdrawn. Its letter stays in the record.');
+  }));
+
+  app.get('/justice/inquisitions/:id/picture/:kind/:pid', seeOrKey, wrap(async (req, res, next) => {
+    const i = J.inqGet(String(req.params.id));
+    const im = J.inqPicture(i, String(req.params.kind), String(req.params.pid));
+    if (!im) return next();
+    res.setHeader('Cache-Control', 'private, max-age=600');
+    res.type(im.type === 'png' ? 'image/png' : 'image/jpeg').send(im.data);
+  }));
+
+  app.get('/justice/cases/:id/link.json', (req, res) => {
+    if (!byKey(req)) return res.status(404).type('text/plain').send('');
+    const c = J.caseGet(String(req.params.id));
+    if (!c || c.sealed) return res.status(404).json({ error: 'gone' });
+    res.setHeader('Cache-Control', 'no-store');
+    const K = J.KIND_BY_ID[c.kind] || {};
+    res.json({
+      id: c.id, no: c.no, kind: K.name || c.kind, kindLabel: K.label || '', accuserAs: K.accuser || 'Brought by', accusedAs: K.accused || 'The accused',
+      subject: c.subject, accuser: c.accuser || '', accused: c.accused || '', status: c.status, hold: c.hold || '',
+      opened: c.opened || c.at, openedByName: c.openedByName || '', summary: c.summary || '',
+      plea: c.plea || '', justice: c.justice || '', prosecutor: c.prosecutor || '', advocate: c.advocate || '', clerk: c.clerk || '',
+      hearings: (c.hearings || []).map(h => ({ when: h.when, place: h.place || '', before: h.before || '', note: h.note || '' })),
+      witnesses: (c.witnesses || []).map(w => ({ name: w.name, standing: w.standing || '', forWhom: w.forWhom || '', sworn: !!w.sworn })),
+      papers: (c.papers || []).map(p => ({ kind: p.kind, title: p.title, by: p.by || '', at: p.at, body: p.body || '' })),
+      judged: !!(c.judgment && c.judgment.given), finding: c.judgment && c.judgment.finding ? c.judgment.finding : ''
+    });
+  });
+
+  app.get('/justice/inquisitions/:id/link.json', (req, res) => {
+    if (!byKey(req)) return res.status(404).type('text/plain').send('');
+    const i = J.inqGet(String(req.params.id));
+    if (!i) return res.status(404).json({ error: 'gone' });
+    res.setHeader('Cache-Control', 'no-store');
+    const c = i.commission;
+    res.json({
+      id: i.id, no: i.no, subject: i.subject, into: i.into || '', status: i.status, hold: i.hold || '', caseNo: i.caseNo || '',
+      at: i.at, byName: i.byName || '', scope: i.scope || '', conclusion: i.conclusion || '',
+      lead: J.inqLead(i), inquisitors: c ? c.inquisitors : '',
+      commission: c ? { no: c.no, state: c.state || (c.revoked ? 'Terminated' : 'In force'), allegations: c.allegations || '', reportTo: c.reportTo || '' } : null,
+      report: !!(i.report && typeof i.report === 'object' && i.report.facts),
+      lines: (i.lines || []).length, statements: (i.statements || []).length,
+      suspects: (i.suspects || []).map(s => Object.assign({ id: s.id, n: s.n, roman: J.roman(s.n), likeness: !!s.likeness },
+        Object.fromEntries(J.SUSPECT_FIELDS.map(([k]) => [k, s[k] || ''])))),
+      evidence: (i.evidence || []).map(e => ({ id: e.id, letter: e.letter, caption: e.caption, where: e.where || '', by: e.by, at: e.at, withdrawn: !!e.withdrawn }))
+    });
+  });
+
   app.post('/justice/inquisitions/:id/remove', seeCases, needInquire, checkCsrf, wrap(async (req, res) => {
     const i = J.inqGet(String(req.params.id));
     if (i) { J.inqRemove(i.id); Activity.log(req.user, 'struck an inquisition', i.no); req.session.flash = { text: `${i.no} is struck entirely.` }; }
@@ -716,6 +811,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
       id: i.id, no: i.no, subject: i.subject, into: i.into || '', persons: personsOf(i), status: i.status, hold: i.hold || '', caseNo: i.caseNo || '',
       commission: !!i.commission, report: !!(i.report && typeof i.report === 'object' && i.report.facts),
       at: i.at, byName: i.byName || '', scope: String(i.scope || '').slice(0, 600), conclusion: String(i.conclusion || '').slice(0, 600),
+      lead: J.inqLead(i), suspects: (i.suspects || []).length, evidence: (i.evidence || []).filter(e => !e.withdrawn).length,
       link: '/justice/inquisitions/' + encodeURIComponent(i.id)
     }));
     const notices = J.notices().map(n => ({

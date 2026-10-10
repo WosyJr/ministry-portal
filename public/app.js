@@ -110,3 +110,23 @@
     });
   });
 })();
+(function () {
+  document.querySelectorAll('ul[data-fold]').forEach(function (ul) {
+    var keep = Number(ul.getAttribute('data-fold')) || 3;
+    var items = ul.querySelectorAll(':scope > li');
+    if (items.length <= keep + 1) return;
+    for (var n = keep; n < items.length; n++) items[n].hidden = true;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn ghost small foldmore';
+    var shut = '+ ' + (items.length - keep) + ' more';
+    b.textContent = shut;
+    b.addEventListener('click', function () {
+      var open = b.getAttribute('aria-expanded') === 'true';
+      for (var n = keep; n < items.length; n++) items[n].hidden = open;
+      b.setAttribute('aria-expanded', open ? 'false' : 'true');
+      b.textContent = open ? shut : 'Show fewer';
+    });
+    ul.after(b);
+  });
+})();

@@ -165,8 +165,6 @@ a.tal:hover{border-color:var(--blood)}
 .tal .tl{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--sepia)}
 .plainlist{list-style:none;margin:0;padding:0}
 .plainlist li{padding:7px 0;border-bottom:1px solid rgba(184,154,98,.45);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-/* An entry with several lines to it — a line of inquiry and what it rests upon,
-   a notice and the ground of it — reads as a paragraph, not a row of chips. */
 .plainlist li.lined{display:block}
 .plainlist li.lined .small{display:inline}
 .notif-list li.unread{background:rgba(107,20,20,.06);border-left:3px solid var(--blood);padding-left:8px;font-weight:600}
@@ -556,7 +554,6 @@ details.inlinedit .stack{margin-top:8px;min-width:230px;align-items:stretch}
 details.inlinedit .csf{width:100%;margin-bottom:6px}
 .cited{margin:6px 0 8px;padding:7px 11px;border-left:3px solid var(--blood);background:rgba(142,27,27,.07);font-size:13.5px}
 
-/* ---- Papers of Justice that may be given out ---- */
 .jusdoc{text-align:left}
 .jusdoc .eyebrow,.jusdoc .admin,.jusdoc .s-ministry,.jusdoc .s-orn,.jusdoc .s-hear,.jusdoc .s-title,.jusdoc .s-no{text-align:center}
 .jusdoc .s-hear{margin:26px 0 8px;border-top:1px solid var(--gold-soft);padding-top:14px}
@@ -572,7 +569,6 @@ details.inlinedit .csf{width:100%;margin-bottom:6px}
 .docseal-mark{margin-top:14px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
 @media (max-width:560px){.docfacts{grid-template-columns:1fr;gap:2px 0}.docfacts dd{margin-bottom:10px}}
 
-/* ---- Justice: plea, seal, check-numbers, dues, verification ---- */
 .sealnote{border:1px solid var(--blood);background:rgba(122,26,26,.07);padding:10px 14px;margin:12px 0;border-radius:2px}
 .codeno{letter-spacing:.12em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .doccheck{margin-top:26px;padding-top:16px;border-top:1px dashed var(--gold-soft);text-align:center;font-size:12px;color:var(--sepia)}
@@ -595,20 +591,17 @@ table.rpt td{text-align:right;font-weight:600;padding:6px 0;border-bottom:1px so
 .plainhist li{padding:8px 12px;border-left:3px solid var(--gold-soft);background:rgba(246,237,214,.55);margin-bottom:5px;font-size:14.5px}
 .plainhist .ph-when{display:block;color:var(--sepia);font-size:12.5px;margin-bottom:2px}
 
-/* ---- Nav: the public row and the officers' row, told apart at a glance ---- */
 .warnav.staffrow{margin-top:-6px;padding-top:10px;border-top:1px dashed var(--gold-soft);background:rgba(122,26,26,.035)}
 .warnav.staffrow .rowlead{align-self:center;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--blood);font-weight:600;padding:0 14px 0 2px;white-space:nowrap;opacity:.8}
 .warnav.staffrow a{color:var(--sepia)}
 .warnav.staffrow a.on{color:var(--blood)}
 @media(max-width:640px){.warnav.staffrow .rowlead{width:100%;padding-bottom:4px}}
 
-/* ---- Record lookup: browse and filter ---- */
 .rfilters{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
 .rfilters .rfilter{display:inline-block;padding:5px 13px;border:1px solid var(--gold-soft);border-radius:2px;font-size:13.5px;color:var(--sepia);text-decoration:none;background:rgba(246,237,214,.5)}
 .rfilters .rfilter:hover{border-color:var(--gold);color:var(--ink)}
 .rfilters .rfilter.on{background:var(--blood);border-color:var(--blood);color:#FFF6E6;font-weight:600}
 
-/* ---- Questions & Answers ---- */
 .guiderow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:14px 0 8px}
 .guidetile{display:block;padding:18px 20px;border:1px solid var(--gold-soft);background:rgba(246,237,214,.55);text-decoration:none;color:var(--ink);border-radius:2px;transition:border-color .15s,background .15s}
 .guidetile:hover{border-color:var(--gold);background:rgba(246,237,214,.9)}
@@ -632,7 +625,6 @@ table.rpt td{text-align:right;font-weight:600;padding:6px 0;border-bottom:1px so
 .movebar{display:flex;gap:6px;align-items:center;margin:0}
 .movebar select{font-size:13.5px;padding:4px 6px;max-width:170px}
 
-/* ---- Ministry of Finance ---- */
 .monthbar{display:flex;gap:8px;align-items:center;margin:12px 0 18px}
 .monthbar .sel{font-family:var(--display);font-size:19px;padding:4px 10px}
 .numbox{display:flex;gap:14px;margin:18px 0;border:1px solid var(--gold-soft);background:rgba(246,237,214,.4);padding:18px 20px}
@@ -1435,8 +1427,6 @@ body.hand-arrow{--cur-rest:url("/cursor-arrow.png") 2 2;--cur-press:url("/cursor
 }
 @media (hover:none){body.drawnhand,body.drawnhand *{cursor:auto}}
 
-/* A short page used to stop where its content stopped, leaving the lighter
-   ground of the document showing beneath it. */
 body{min-height:100vh}
 html:has(body.lamplit){background:#8E7345}
 html:has(body.ground-desk){background:#1F1409}
@@ -1800,9 +1790,6 @@ table.codetable td:last-child{width:1%;white-space:nowrap}
 }
 .reqcard.rulesetcard{border-left:3px solid var(--gold);background:rgba(255,248,230,.5)}
 
-/* ===== THE STAFF ROOM ==================================================
-   Not the Ministry. A gamemaster's working room, and it looks like one:
-   void ground, aetherial light, glass panels, nothing on parchment.       */
 body.arcane{
   --void:#0A0917;--void-2:#12102A;--glass:rgba(24,22,54,.72);--glass-2:rgba(32,29,68,.62);
   --arc:#7FE3E0;--arc-2:#B48CFF;--arc-3:#F2C97E;
@@ -2606,7 +2593,6 @@ body.lamplit .reqcard.rq-split>.rq-side{background:rgba(120,88,42,.07)}
   .topbar .who{white-space:normal;min-width:0;overflow-wrap:anywhere;flex:1 1 100%}
 }
 
-/* night */
 
 html[data-theme="dark"]{color-scheme:dark;--parch:#16100A;--parch-2:#221A10;--parch-3:#2B2014;--paper:#1E1710;
   --ink:#ECDFC2;--sepia:#C4AC80;--blood:#E38B78;--blood-2:#EE9C88;--gold:#D4B067;--gold-soft:#A88B4E;--line:#5C4729;
@@ -2803,7 +2789,6 @@ html[data-theme="dark"] body{--ink:#DFD3BA;--sepia:#B8A27A}
 html[data-theme="dark"] .mast h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3{color:#E6A896}
 @media (prefers-color-scheme:dark){html:not([data-theme="light"]) body{--ink:#DFD3BA;--sepia:#B8A27A}html:not([data-theme="light"]) .mast h1,html:not([data-theme="light"]) h2,html:not([data-theme="light"]) h3{color:#E6A896}}
 
-/* night, second pass */
 
 html[data-theme="dark"] .opts label,html[data-theme="dark"] .qopt,html[data-theme="dark"] code.pw,html[data-theme="dark"] code.pickme,html[data-theme="dark"] .qnum,html[data-theme="dark"] .lettertargets,html[data-theme="dark"] .serverbar .srv.on,html[data-theme="dark"] .warstat.over,html[data-theme="dark"] details.edit[open],html[data-theme="dark"] .handswatch{background:#231A11;color:var(--ink);border-color:var(--line)}
 html[data-theme="dark"] .opts label:has(input:checked){background:#8E1B1B;color:#FFF6E6;border-color:#B23030}
@@ -2831,7 +2816,6 @@ html:not([data-theme="light"]) .chip.warn,html:not([data-theme="light"]) .chip.b
 html[data-theme="dark"] .jumpbtn .key{border-color:var(--line)}
 @media (prefers-color-scheme:dark){html:not([data-theme="light"]) .jumpbtn{background:#231A11;color:var(--ink);border-color:var(--line)}html:not([data-theme="light"]) .jumpbtn .key{border-color:var(--line)}}
 
-/* night, third pass */
 
 html[data-theme="dark"] .paper,html[data-theme="dark"] .post,html[data-theme="dark"] .proclamation,html[data-theme="dark"] .flcard,html[data-theme="dark"] .gazsec,html[data-theme="dark"] .gazitem,html[data-theme="dark"] .wantcard,html[data-theme="dark"] .noticebox,html[data-theme="dark"] .holders .chip,html[data-theme="dark"] .checkcard,html[data-theme="dark"] .signwrap .writ,html[data-theme="dark"] .verified,html[data-theme="dark"] .termbox,html[data-theme="dark"] details.rank,html[data-theme="dark"] .moremenu,html[data-theme="dark"] .deskpanel .deskitem,html[data-theme="dark"] .plainlist.boxed,html[data-theme="dark"] .warrole-sub{background:#231A11;color:var(--ink)}
 html[data-theme="dark"] details.fold > summary:hover{background:rgba(255,220,160,.06)}
@@ -2851,7 +2835,6 @@ html:not([data-theme="light"]) *[style*="background:#F"],html:not([data-theme="l
 
 main .weeklist li,main li.weekline,main .plainlist li,main .folded li,main .ledger li,main nav li,main .toc li,main .booktoc li,main .lanes li,main .opts label,main .deskpanel li{max-width:none}
 
-/* night, sweep of every light surface */
 html[data-theme="dark"] #jumpinput,html[data-theme="dark"] .askcard,html[data-theme="dark"] .bleaf-in ul a,html[data-theme="dark"] .csf input[type=number],html[data-theme="dark"] .csf input[type=search],html[data-theme="dark"] .csf input[type=text],html[data-theme="dark"] .csf select,html[data-theme="dark"] .csf textarea,html[data-theme="dark"] .cslink input,html[data-theme="dark"] .csrow,html[data-theme="dark"] .dir-card,html[data-theme="dark"] .docfacts,html[data-theme="dark"] .dv-banner,html[data-theme="dark"] .dv-head,html[data-theme="dark"] .dv-kv th,html[data-theme="dark"] .filters input[type=search],html[data-theme="dark"] .finder input,html[data-theme="dark"] .flash,html[data-theme="dark"] .guidetile,html[data-theme="dark"] .guidetile:hover,html[data-theme="dark"] .histlist li,html[data-theme="dark"] .inline-form input,html[data-theme="dark"] .inst-card,html[data-theme="dark"] .jumpbtn,html[data-theme="dark"] .lettertargets,html[data-theme="dark"] .maplegend .pin.hollow,html[data-theme="dark"] .meetgrid tr,html[data-theme="dark"] .mincard-links a,html[data-theme="dark"] .mincard.shut,html[data-theme="dark"] .motionstage,html[data-theme="dark"] .notfound,html[data-theme="dark"] .numbox,html[data-theme="dark"] .opts label,html[data-theme="dark"] .panel,html[data-theme="dark"] .paper,html[data-theme="dark"] .permset,html[data-theme="dark"] .plainhist li,html[data-theme="dark"] .post,html[data-theme="dark"] .qnum,html[data-theme="dark"] .qopt,html[data-theme="dark"] .rank-form input[type=text],html[data-theme="dark"] .rank-form textarea,html[data-theme="dark"] .recprev,html[data-theme="dark"] .reqcard,html[data-theme="dark"] .reqcard.rulesetcard,html[data-theme="dark"] .rfilters .rfilter,html[data-theme="dark"] .rosterbar input[type=search],html[data-theme="dark"] .search-box input,html[data-theme="dark"] .sel,html[data-theme="dark"] .serverbar .srv.on,html[data-theme="dark"] .sitlist,html[data-theme="dark"] .stack .sel,html[data-theme="dark"] .stack input[type=text],html[data-theme="dark"] .sumstrip,html[data-theme="dark"] .todo,html[data-theme="dark"] .verified,html[data-theme="dark"] .vpage,html[data-theme="dark"] .warstat.over,html[data-theme="dark"] .writ input[type=file],html[data-theme="dark"] .writ input[type=number],html[data-theme="dark"] .writ input[type=password],html[data-theme="dark"] .writ input[type=text],html[data-theme="dark"] .writ select,html[data-theme="dark"] .writ textarea,html[data-theme="dark"] body,html[data-theme="dark"] body.lamplit,html[data-theme="dark"] body.lamplit .act:hover,html[data-theme="dark"] body.lamplit .addwrap > summary,html[data-theme="dark"] body.lamplit .btn.ghost,html[data-theme="dark"] body.lamplit .chip,html[data-theme="dark"] body.lamplit .mincard-links a,html[data-theme="dark"] body.lamplit .recprev,html[data-theme="dark"] body.lamplit .sumstrip,html[data-theme="dark"] body.lamplit .warstat,html[data-theme="dark"] body.lamplit .wrap > header.mast,html[data-theme="dark"] body.lamplit .wrap > main,html[data-theme="dark"] body.lamplit details.addwrap,html[data-theme="dark"] body.lamplit details.fold,html[data-theme="dark"] body.lamplit nav.tabs,html[data-theme="dark"] body.lamplit.provpage .wrap > .subnav,html[data-theme="dark"] body.lamplit.provpage .wrap > section,html[data-theme="dark"] code.pickme,html[data-theme="dark"] code.pw,html[data-theme="dark"] details.rank,html[data-theme="dark"] input[type=search],html[data-theme="dark"] table.ledger,html[data-theme="dark"] tr.totalrow td{background:#231A11;color:var(--ink)}
 html[data-theme="dark"] #jumpinput,html[data-theme="dark"] .csf input[type=number],html[data-theme="dark"] .csf input[type=search],html[data-theme="dark"] .csf input[type=text],html[data-theme="dark"] .csf select,html[data-theme="dark"] .csf textarea,html[data-theme="dark"] .cslink input,html[data-theme="dark"] .filters input[type=search],html[data-theme="dark"] .finder input,html[data-theme="dark"] .inline-form input,html[data-theme="dark"] .rank-form input[type=text],html[data-theme="dark"] .rank-form textarea,html[data-theme="dark"] .rosterbar input[type=search],html[data-theme="dark"] .search-box input,html[data-theme="dark"] .sel,html[data-theme="dark"] .stack .sel,html[data-theme="dark"] .stack input[type=text],html[data-theme="dark"] .writ input[type=file],html[data-theme="dark"] .writ input[type=number],html[data-theme="dark"] .writ input[type=password],html[data-theme="dark"] .writ input[type=text],html[data-theme="dark"] .writ select,html[data-theme="dark"] .writ textarea,html[data-theme="dark"] input[type=search]{background:#140F09!important;color:#ECDFC2!important;border-color:#5C4729!important}
 @media (prefers-color-scheme:dark){html:not([data-theme="light"]) #jumpinput,html:not([data-theme="light"]) .askcard,html:not([data-theme="light"]) .bleaf-in ul a,html:not([data-theme="light"]) .csf input[type=number],html:not([data-theme="light"]) .csf input[type=search],html:not([data-theme="light"]) .csf input[type=text],html:not([data-theme="light"]) .csf select,html:not([data-theme="light"]) .csf textarea,html:not([data-theme="light"]) .cslink input,html:not([data-theme="light"]) .csrow,html:not([data-theme="light"]) .dir-card,html:not([data-theme="light"]) .docfacts,html:not([data-theme="light"]) .dv-banner,html:not([data-theme="light"]) .dv-head,html:not([data-theme="light"]) .dv-kv th,html:not([data-theme="light"]) .filters input[type=search],html:not([data-theme="light"]) .finder input,html:not([data-theme="light"]) .flash,html:not([data-theme="light"]) .guidetile,html:not([data-theme="light"]) .guidetile:hover,html:not([data-theme="light"]) .histlist li,html:not([data-theme="light"]) .inline-form input,html:not([data-theme="light"]) .inst-card,html:not([data-theme="light"]) .jumpbtn,html:not([data-theme="light"]) .lettertargets,html:not([data-theme="light"]) .maplegend .pin.hollow,html:not([data-theme="light"]) .meetgrid tr,html:not([data-theme="light"]) .mincard-links a,html:not([data-theme="light"]) .mincard.shut,html:not([data-theme="light"]) .motionstage,html:not([data-theme="light"]) .notfound,html:not([data-theme="light"]) .numbox,html:not([data-theme="light"]) .opts label,html:not([data-theme="light"]) .panel,html:not([data-theme="light"]) .paper,html:not([data-theme="light"]) .permset,html:not([data-theme="light"]) .plainhist li,html:not([data-theme="light"]) .post,html:not([data-theme="light"]) .qnum,html:not([data-theme="light"]) .qopt,html:not([data-theme="light"]) .rank-form input[type=text],html:not([data-theme="light"]) .rank-form textarea,html:not([data-theme="light"]) .recprev,html:not([data-theme="light"]) .reqcard,html:not([data-theme="light"]) .reqcard.rulesetcard,html:not([data-theme="light"]) .rfilters .rfilter,html:not([data-theme="light"]) .rosterbar input[type=search],html:not([data-theme="light"]) .search-box input,html:not([data-theme="light"]) .sel,html:not([data-theme="light"]) .serverbar .srv.on,html:not([data-theme="light"]) .sitlist,html:not([data-theme="light"]) .stack .sel,html:not([data-theme="light"]) .stack input[type=text],html:not([data-theme="light"]) .sumstrip,html:not([data-theme="light"]) .todo,html:not([data-theme="light"]) .verified,html:not([data-theme="light"]) .vpage,html:not([data-theme="light"]) .warstat.over,html:not([data-theme="light"]) .writ input[type=file],html:not([data-theme="light"]) .writ input[type=number],html:not([data-theme="light"]) .writ input[type=password],html:not([data-theme="light"]) .writ input[type=text],html:not([data-theme="light"]) .writ select,html:not([data-theme="light"]) .writ textarea,html:not([data-theme="light"]) body,html:not([data-theme="light"]) body.lamplit,html:not([data-theme="light"]) body.lamplit .act:hover,html:not([data-theme="light"]) body.lamplit .addwrap > summary,html:not([data-theme="light"]) body.lamplit .btn.ghost,html:not([data-theme="light"]) body.lamplit .chip,html:not([data-theme="light"]) body.lamplit .mincard-links a,html:not([data-theme="light"]) body.lamplit .recprev,html:not([data-theme="light"]) body.lamplit .sumstrip,html:not([data-theme="light"]) body.lamplit .warstat,html:not([data-theme="light"]) body.lamplit .wrap > header.mast,html:not([data-theme="light"]) body.lamplit .wrap > main,html:not([data-theme="light"]) body.lamplit details.addwrap,html:not([data-theme="light"]) body.lamplit details.fold,html:not([data-theme="light"]) body.lamplit nav.tabs,html:not([data-theme="light"]) body.lamplit.provpage .wrap > .subnav,html:not([data-theme="light"]) body.lamplit.provpage .wrap > section,html:not([data-theme="light"]) code.pickme,html:not([data-theme="light"]) code.pw,html:not([data-theme="light"]) details.rank,html:not([data-theme="light"]) input[type=search],html:not([data-theme="light"]) table.ledger,html:not([data-theme="light"]) tr.totalrow td{background:#231A11;color:var(--ink)}
@@ -2864,7 +2847,6 @@ html[data-theme="dark"] .deskbtn,html[data-theme="dark"] .deskbtn.urgent{backgro
 html[data-theme="dark"] .qchip,html[data-theme="dark"] .sitlist a.on,html[data-theme="dark"] .warnav.sub a.on,html[data-theme="dark"] .rfilters .rfilter.on,html[data-theme="dark"] .subfilter.on,html[data-theme="dark"] .clerktabs a.on,html[data-theme="dark"] .opts label:has(input:checked){background:#8E1B1B;color:#FFF6E6;border-color:#B23030}
 @media (prefers-color-scheme:dark){html:not([data-theme="light"]) .qchip,html:not([data-theme="light"]) .sitlist a.on,html:not([data-theme="light"]) .warnav.sub a.on,html:not([data-theme="light"]) .rfilters .rfilter.on,html:not([data-theme="light"]) .subfilter.on,html:not([data-theme="light"]) .clerktabs a.on,html:not([data-theme="light"]) .opts label:has(input:checked){background:#8E1B1B;color:#FFF6E6;border-color:#B23030}}
 
-/* ---- A record drawn as paper ---- */
 .paperwrap{margin:14px 0 22px}
 .pbar{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;margin:0 0 12px;font-size:14px}
 .pbar a{text-decoration:none;border-bottom:1px solid var(--line)}
@@ -2896,7 +2878,6 @@ html[data-theme="dark"] .qchip,html[data-theme="dark"] .sitlist a.on,html[data-t
 html[data-theme="dark"] .paperdesk .scroll,html:not([data-theme="light"]) .paperdesk .scroll{background:#F3E9D2;color:#2B1B0E}
 html[data-theme="dark"] .pside .box{background:rgba(255,255,255,.04)}
 
-/* ---- My Desk as cards ---- */
 .deskhead2{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-bottom:14px}
 .deskhead2 h2{margin:0}
 .deskhead2 .sum{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--sepia)}
@@ -2919,7 +2900,6 @@ html[data-theme="dark"] .pside .box{background:rgba(255,255,255,.04)}
 html[data-theme="dark"] .dcard{background:rgba(255,255,255,.035)}
 @media (prefers-color-scheme:dark){html:not([data-theme="light"]) .dcard{background:rgba(255,255,255,.035)}}
 
-/* ---- The line on a party ---- */
 .tl{position:relative;padding-left:22px;display:grid;gap:14px;margin:6px 0 10px}
 .tl::before{content:"";position:absolute;left:6px;top:4px;bottom:4px;width:1px;background:var(--line)}
 .tl .ev{position:relative;display:grid;gap:3px}
@@ -2942,3 +2922,90 @@ html[data-theme="dark"] .dcard{background:rgba(255,255,255,.035)}
 @media print{.packbody .pack{gap:0;max-width:none}.packbody .scroll{animation:none!important;clip-path:none!important}}
 html[data-theme="dark"] .qkey{background:#6B1414;color:#F1E6CC}
 @media (prefers-color-scheme:dark){html:not([data-theme="light"]) .qkey{background:#6B1414;color:#F1E6CC}}
+
+.leadbox{border:1px solid var(--line);border-left:4px solid var(--blood);background:var(--paper);padding:12px 16px;margin:14px 0}
+.leadlabel{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+.leadname{font-size:17px;color:var(--ink)}
+.leadline{margin:4px 0 6px;font-size:15px}
+.leadtag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#F6EDD6;background:var(--blood-2);padding:1px 7px;margin-right:4px;vertical-align:1px}
+html[data-theme="dark"] .leadtag{background:#8A1E1E;color:#F6EDD6}
+@media (prefers-color-scheme:dark){html:not([data-theme="light"]) .leadtag{background:#8A1E1E;color:#F6EDD6}}
+
+.suspects{display:grid;gap:14px;margin:8px 0}
+.suspect{border:1px solid var(--line);background:var(--paper);display:grid;grid-template-columns:170px minmax(0,1fr)}
+.suspect .tag{border-right:1px solid var(--line);padding:16px;display:grid;align-content:start;gap:10px}
+.suspect .face{display:block;width:100%;max-width:130px;aspect-ratio:3/4;border:1px solid var(--line);overflow:hidden;background:var(--parch-2)}
+.suspect .face img{width:100%;height:100%;object-fit:cover;display:block}
+.suspect .face.none{display:grid;place-items:center;border-style:dashed;color:var(--sepia);font-size:12px;text-align:center;padding:6px}
+.suspect .sno{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+.suspect .salias{font-family:var(--display);color:var(--blood);font-size:24px;line-height:1.15;overflow-wrap:anywhere}
+.suspect .sname{font-size:14px;color:var(--sepia)}
+.suspect dl{margin:0;padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px 22px;align-content:start}
+.suspect dl>div{min-width:0}
+.suspect dt{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.suspect dd{margin:2px 0 0;font-size:15px;overflow-wrap:anywhere}
+.suspect dd.unk{color:var(--sepia);font-style:italic;opacity:.8}
+.suspect .wide{grid-column:1/-1}
+.suspect dd ul{margin:2px 0 0;padding-left:18px;columns:2;column-gap:28px;max-width:none}
+.suspect dd li{break-inside:avoid;max-width:none}
+.suspect .sacts{grid-column:1/-1;border-top:1px solid var(--line);padding:6px 16px 10px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.suspect .sacts details{flex:1 1 320px}
+.picprev{display:block;max-width:220px;max-height:180px;margin-top:8px;border:1px solid var(--line)}
+
+.exhibits{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin:8px 0}
+.exhibit{margin:0;border:1px solid var(--line);background:var(--paper);display:grid;align-content:start}
+.exhibit a{display:block;aspect-ratio:4/3;overflow:hidden;background:var(--parch-2)}
+.exhibit img{width:100%;height:100%;object-fit:cover;display:block}
+.exhibit .ph{aspect-ratio:4/3;display:grid;place-items:center;font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--sepia);border-bottom:1px dashed var(--line)}
+.exhibit figcaption{padding:8px 10px;font-size:14px;display:grid;gap:3px}
+.exhibit figcaption b{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--blood);text-transform:uppercase}
+.exhibit figcaption span{color:var(--sepia);font-size:12.5px}
+.exhibit.gone{opacity:.65}
+.lightbox{position:fixed;inset:0;z-index:1000;background:rgba(8,6,3,.88);display:grid;place-items:center;padding:24px;cursor:zoom-out}
+.lightbox figure{margin:0;max-width:min(1100px,100%);display:grid;gap:10px}
+.lightbox img{max-width:100%;max-height:82vh;object-fit:contain;margin:0 auto;display:block}
+.lightbox figcaption{color:#ECDFC2;text-align:center;font-size:15px}
+.docexhibits{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:6px 0 14px}
+.docexhibits figure{margin:0}
+.docexhibits img{width:100%;border:1px solid #B5AD9A;display:block}
+.docexhibits figcaption{font-size:14px;margin-top:4px}
+
+.ptools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 10px}
+.ptools .sp{flex:1}
+.ptools .pf{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;padding:4px 10px;border:1px solid var(--line);color:var(--sepia);background:transparent;cursor:pointer;border-radius:2px}
+.ptools .pf.on{border-color:var(--gold);color:var(--ink);background:rgba(184,150,86,.16)}
+.papers{border-top:1px solid var(--line);margin-bottom:12px}
+details.pp{border-bottom:1px solid var(--line)}
+details.pp[hidden]{display:none}
+details.pp>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:18px 140px minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:11px 4px}
+details.pp>summary::-webkit-details-marker{display:none}
+details.pp>summary::before{content:"▸";color:var(--gold);font-size:13px}
+details.pp[open]>summary::before{content:"▾"}
+details.pp>summary:hover .t{color:var(--blood)}
+details.pp .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+details.pp .t{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+details.pp .m{color:var(--sepia);font-size:13px;white-space:nowrap}
+details.pp .ppbody{padding:0 4px 16px 34px}
+.foldmore{margin:2px 0 10px}
+
+@media (max-width:640px){
+  .suspect{grid-template-columns:1fr}
+  .suspect .tag{border-right:0;border-bottom:1px solid var(--line);grid-template-columns:90px minmax(0,1fr);align-items:center}
+  .suspect dd ul{columns:1}
+  details.pp>summary{grid-template-columns:16px minmax(0,1fr);row-gap:2px}
+  details.pp .k,details.pp .m{grid-column:2}
+  details.pp .t{white-space:normal}
+  details.pp .ppbody{padding-left:20px}
+}
+@media print{.exhibit form,.suspect .sacts,.ptools{display:none}}
+details.foldsec{border:1px solid var(--line);background:var(--paper);margin:8px 0}
+details.foldsec>summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;padding:12px 16px}
+details.foldsec>summary::-webkit-details-marker{display:none}
+details.foldsec>summary::before{content:"▸";color:var(--gold)}
+details.foldsec[open]>summary::before{content:"▾"}
+details.foldsec .fs-open,details.foldsec .fs-shut{font-family:var(--display);color:var(--blood);font-size:18px}
+details.foldsec .fs-shut{display:none}
+details.foldsec[open] .fs-open{display:none}
+details.foldsec[open] .fs-shut{display:inline}
+details.foldsec .fs-names{color:var(--sepia);font-size:14px;min-width:0;overflow-wrap:anywhere}
+details.foldsec>.suspects{padding:0 12px 12px;margin:0}
