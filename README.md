@@ -76,9 +76,9 @@ ADMIN_USERNAME=nimmi ADMIN_PASSWORD=choose-a-long-password npm start
 - Parties get the line: everything the Bench has written that names them, in order, with gaps marked.
 - `/justice/link.json` carries the Ministry's calendar and, per inquisition, the people it names; the printable papers also answer to `Authorization: Bearer AUDIT_KEY` so PenOc can show them to officers with no Ministry login.
 
-## Accounts kept by hand
+## Payroll
 
-Finance › Accounts lists every group's balance; a Finance manager sets any of them and saves at once, with a reason. On a group's Rosters page the account shows one balance with three actions: take money out (what for, amount, for whom, kind), put money in, or set the balance outright. Every line is kept in `finance-book.json` with who, when and the balance after, and can be struck, which puts the balance back. Spending logged on the Spending page and wages paid on People & Wages come off the balance too. When this first runs, each group's old account is carried over as its opening line, and the old month-by-month ledger stays readable beneath it.
+Finance › Payroll lists every group with what it pays its people each week (added up from its roll) and the most it may pay. A Finance manager sets each group's max payroll a week, on that page or on the group's Rosters page, and the page shows how much is left or how far over the max a group is. Maxes are kept in `finance-caps.json`.
 
 ## Themes
 

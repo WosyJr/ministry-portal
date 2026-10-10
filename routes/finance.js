@@ -295,7 +295,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   }));
 
   const rosterView = (req, res, groupId, withInactive, gs, preview, pasted) =>
-    page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive, F.musterFor(F.groupGet(groupId)), preview, pasted, null, F.bookFor(groupId)));
+    page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive, F.musterFor(F.groupGet(groupId)), preview, pasted, null, F.groupGet(groupId) ? F.payrollLine(F.groupGet(groupId)) : null));
 
   app.post('/finance/groups/for-roll', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
     try {
@@ -369,41 +369,23 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   }));
 
 
-  app.get('/finance/accounts', seeLedger, wrap(async (req, res) => {
-    page(res, req, 'The Accounts', FV.accountsPage(req.user, F.accountsAll(), req.session.csrf, may(req)));
+  app.get('/finance/accounts', (req, res) => res.redirect(301, '/finance/payroll'));
+
+  app.get('/finance/payroll', seeLedger, wrap(async (req, res) => {
+    page(res, req, 'Payroll', FV.payrollPage(req.user, F.payrollAll(), req.session.csrf, may(req)));
   }));
 
-  app.post('/finance/accounts', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
+  app.post('/finance/payroll', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
     const b = req.body || {};
     const values = {};
-    Object.keys(b).forEach(k => { if (k.startsWith('bal_')) values[k.slice(4)] = b[k]; });
+    Object.keys(b).forEach(k => { if (k.startsWith('cap_')) values[k.slice(4)] = b[k]; });
+    const back = String(b.back || '');
     try {
-      const made = F.bookSetMany(values, b.why, req.user);
-      made.forEach(e => Activity.log(req.user, 'set an account balance', F.groupName(e.groupId), String(e.amount)));
-      req.session.flash = { text: made.length ? `${made.length} ${made.length === 1 ? 'balance is' : 'balances are'} set.` : 'Nothing was changed.' };
+      const made = F.capsSetMany(values, req.user);
+      made.forEach(e => Activity.log(req.user, 'set a max payroll', F.groupName(e.groupId), String(e.weekly)));
+      req.session.flash = { text: made.length ? (made.length === 1 ? 'The max payroll is set.' : made.length + ' max payrolls are set.') : 'Nothing was changed.' };
     } catch (e) { req.session.flash = { err: true, text: e.message }; }
-    res.redirect('/finance/accounts');
-  }));
-
-  app.post('/finance/book/:groupId', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
-    const groupId = String(req.params.groupId);
-    const b = req.body || {};
-    try {
-      const e = F.bookAdd(groupId, String(b.kind || ''), b, req.user);
-      const name = F.groupName(groupId);
-      Activity.log(req.user, e.kind === 'out' ? 'took money out of an account' : e.kind === 'in' ? 'put money into an account' : 'set an account balance', name, String(e.amount) + (e.what ? ' \u2014 ' + e.what : ''));
-      const after = F.bookFor(groupId).balance;
-      const fmt = n => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      req.session.flash = { text: (e.kind === 'out' ? fmt(e.amount) + ' taken out' + (e.what ? ' for ' + e.what : '') : e.kind === 'in' ? fmt(e.amount) + ' put in' : 'The balance is set') + '. ' + name + ' now holds ' + fmt(after) + '.' };
-    } catch (e) { req.session.flash = { err: true, text: e.message }; }
-    res.redirect('/finance/rosters?group=' + encodeURIComponent(groupId));
-  }));
-
-  app.post('/finance/book/line/:id/strike', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
-    const e = F.bookStrike(String(req.params.id), req.user);
-    if (e) Activity.log(req.user, 'struck an account line', F.groupName(e.groupId), e.what || '');
-    req.session.flash = { text: e ? 'Struck. The balance is put back.' : 'Nothing to strike.' };
-    res.redirect(e ? '/finance/rosters?group=' + encodeURIComponent(e.groupId) : '/finance/accounts');
+    res.redirect(back && F.groupGet(back) ? '/finance/rosters?group=' + encodeURIComponent(back) : '/finance/payroll');
   }));
 
   app.get('/finance/settings', seeLedger, wrap(async (req, res) => {
