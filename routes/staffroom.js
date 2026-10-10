@@ -175,6 +175,17 @@ module.exports = function (app, { checkCsrf }) {
   app.get('/province/staff/log/pulls', gate, (req, res) => {
     show(req, res, 'log', SRV.pullsPage(srv(req), req.session.csrf, { list: KP.list(), key: KP.keyFor(req.user.username), host: hostOf(req), max: KP.MAX_ITEMS }));
   });
+  app.get('/province/staff/log/person', gate, (req, res) => {
+    const who = String(req.query.who || '').replace(/[\r\n<>]/g, '').trim().slice(0, 60);
+    const range = ['24h', '7d', '30d'].includes(String(req.query.range)) ? String(req.query.range) : '7d';
+    if (!who) return res.redirect('/province/staff/log/pulls?server=' + srv(req));
+    const isId = /^\d{15,22}$/.test(who);
+    const kz = (process.env.KEIZAAL_URL || 'https://keizaal.com') + '/admin/logs?server=kzl-wl&t=' + range + '&' + (isId ? 'discord=' : 'q=') + encodeURIComponent(who) + '#ministrypull=' + encodeURIComponent(JSON.stringify({ who, range }));
+    res.send(`<!doctype html><html><head><meta charset="utf-8"><title>Opening Keizaal</title><style>body{background:#0a0917;color:#e7e4ff;font:16px system-ui;padding:40px;max-width:60ch}a{color:#7fe3e0}</style></head><body>
+<p>Opening Keizaal on <b>${V.esc(who)}</b>, ${range === '24h' ? 'last 24 hours' : range === '7d' ? 'last 7 days' : 'last 30 days'}. When the page is up, click your <b>Pull into the Ministry</b> bookmark and it pulls them without asking.</p>
+<p><a href="${V.esc(kz)}">If nothing happens, open Keizaal here.</a></p>
+<script>location.replace(${JSON.stringify(kz)});</script></body></html>`);
+  });
   app.post('/province/staff/log/key', gate, checkCsrf, (req, res) => {
     KP.keyReset(req.user.username);
     req.session.flash = { text: 'Your pull button is remade. Drag the new one to your bookmarks bar; the old one no longer works.' };

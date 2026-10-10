@@ -3175,3 +3175,4 @@ body.arcane .lgpullnote code{color:var(--arc-3)}
 body.arcane .lgdid{font-family:var(--mono);font-size:11.5px;color:var(--afade);opacity:.8;margin-left:6px}
 body.arcane .k-talk{color:#C9B8FF;background:rgba(201,184,255,.14)}body.arcane .k-house{color:#9FD9B8;background:rgba(159,217,184,.14)}body.arcane .k-admin{color:#F0C4F0;background:rgba(240,196,240,.14)}
 body.arcane .lgchip i.k-talk{background:#C9B8FF}body.arcane .lgchip i.k-house{background:#9FD9B8}body.arcane .lgchip i.k-admin{background:#F0C4F0}
+body.arcane .lgperson-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}body.arcane .lgperson-form input[name=who]{flex:1 1 260px;min-width:0}body.arcane .lgperson-form select{flex:0 0 auto;width:auto}
