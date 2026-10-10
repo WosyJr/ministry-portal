@@ -25,13 +25,24 @@ module.exports = (app, { checkCsrf, wrap }) => {
 
   app.get('/', (req, res) => res.send(V.landingPage(res.locals.today, req.user, Settings.landing(), Settings.pageGround(), Settings.cursor(), req.session.csrf)));
 
-  // The province's own clock, so the date on the page can turn over while
-  // somebody is still looking at it.
   app.get('/api/today', (req, res) => {
     res.set('Cache-Control', 'no-store');
     const t = Settings.today();
     res.json({ text: t.text, day: t.day, month: t.month, year: t.year });
   });
+
+  app.get('/themes', wrap(async (req, res) => {
+    const night = req.user ? ((U.view(req.user.username) || {}).prefs || {}).night || '' : '';
+    res.page({ title: 'Themes', active: '', body: require('../lib/themesview').page(req.user, req.session.csrf, night) });
+  }));
+
+  app.post('/themes', checkCsrf, wrap(async (req, res) => {
+    if (!req.user) return res.status(204).end();
+    const n = String((req.body || {}).night || '');
+    if (n && !require('../lib/themes').byId(n)) return res.status(400).end();
+    U.update(req.user.username, { prefs: { night: n } });
+    res.status(204).end();
+  }));
 
   app.get('/hall', wrap(async (req, res) => {
     res.page({ title: 'The Hall', active: 'home', body: V.publicHome(notices(await publicRows()), res.locals.today) });
@@ -51,9 +62,6 @@ module.exports = (app, { checkCsrf, wrap }) => {
     res.set('Cache-Control', 'no-cache').type(im.type === 'jpg' ? 'image/jpeg' : 'image/png').send(im.data);
   });
 
-  // The Delegate's exercise. Open to anyone with the link, needs no login, and
-  // nothing filed upon it touches the Docket — it is not a record of the
-  // Ministry, it is somebody showing they can write one.
   app.get('/exercise/dispatch', (req, res) => {
     res.page({ title: 'The Delegate\u2019s Exercise', active: '', body: V.exerciseBox(req.session.csrf, null, res.locals.today) });
   });

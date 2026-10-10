@@ -9,8 +9,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   const page = (res, req, title, body) => res.page({ title, active: 'finance', body, branch: 'finance' });
 
   const seeLedger = A.need('findesk', 'finledger');
-  // Someone given nothing but 'finask' may lay a request for money and see the
-  // Requests page. Every other page of Finance stays shut to them.
   const mayAsk = u => !!u && (u.all || Ranks.can(u, 'finask'));
   const seeRequests = (req, res, next) => {
     if (mayAsk(req.user)) return next();
@@ -45,7 +43,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   };
   const may = req => ({ manage: mayManage(req.user), pay: mayPay(req.user), answer: mayPay(req.user), audit: mayAudit(req.user), ask: mayManage(req.user) || mayAsk(req.user), log: mayManage(req.user), askOnly: askOnly(req.user) });
 
-  // ---- Public ----
 
   app.get('/finance', wrap(async (req, res) => {
     const holders = {};
@@ -75,7 +72,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     page(res, req, 'Staff Entrance', FV.entrance(req.session.csrf, '', ''));
   }));
 
-  // ---- Overview ----
 
   app.get('/finance/overview', seeLedger, wrap(async (req, res) => {
     const key = askedMonth(req);
@@ -84,7 +80,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     page(res, req, F.monthLabel(key), FV.overview(req.user, key, b, F.toDo(), recent));
   }));
 
-  // ---- Months ----
 
   app.get('/finance/months', seeLedger, wrap(async (req, res) => {
     const key = askedMonth(req);
@@ -116,7 +111,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     catch (e) { toMonth(req, res, key, '', e.message); }
   }));
 
-  // Draw an income line from the rolls rather than typing it.
   app.get('/finance/months/:key/income/from', seeLedger, needManage, wrap(async (req, res) => {
     const key = String(req.params.key);
     const line = String(req.query.line || '');
@@ -179,7 +173,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     } catch (e) { toMonth(req, res, key, '', e.message); }
   }));
 
-  // ---- Pay out ----
 
   app.get('/finance/payout', seeLedger, wrap(async (req, res) => {
     const key = askedMonth(req);
@@ -202,12 +195,10 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect('/finance/payout?month=' + String(req.params.key));
   }));
 
-  // ---- Requests ----
 
   app.get('/finance/requests', seeRequests, wrap(async (req, res) => {
     const show = ['waiting', 'approved', 'done'].includes(String(req.query.show || '')) ? String(req.query.show) : 'waiting';
     const m = may(req);
-    // One who may only ask sees the requests they laid themselves, and no others.
     const all = F.requests().slice().reverse();
     const mine = m.askOnly ? all.filter(r => r.byUser ? r.byUser === req.user.username : r.by === req.user.name) : all;
     page(res, req, 'Requests', FV.requestsPage(req.user, mine, show, req.session.csrf, m, F.groups().filter(g => g.active !== false)));
@@ -234,7 +225,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect('/finance/requests');
   }));
 
-  // ---- Spending ----
 
   app.get('/finance/spending', seeLedger, wrap(async (req, res) => {
     const key = askedMonth(req);
@@ -257,9 +247,7 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect(back(req, '/finance/spending'));
   }));
 
-  // ---- Rosters ----
 
-  // Who has been paid what. The rolls give the names; this page gives the money.
   app.get('/finance/people', seeLedger, wrap(async (req, res) => {
     const name = String(req.query.name || '').slice(0, 140);
     const person = name ? F.wageFor(name) : null;
@@ -306,12 +294,9 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     rosterView(req, res, groupId, withInactive, gs);
   }));
 
-  // The preview is rendered straight off the paste rather than carried in the
-  // session: a plan of any size would not fit in a cookie.
   const rosterView = (req, res, groupId, withInactive, gs, preview, pasted) =>
-    page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive, F.musterFor(F.groupGet(groupId)), preview, pasted, F.accountFor(groupId)));
+    page(res, req, 'Rosters', FV.rostersPage(req.user, groupId, F.rosterFor(groupId, withInactive), F.rosterCounts(groupId), F.payrollFor(groupId), req.session.csrf, may(req), gs, withInactive, F.musterFor(F.groupGet(groupId)), preview, pasted, null, F.bookFor(groupId)));
 
-  // Making a group for a Ministry that keeps officers but has nobody paying it.
   app.post('/finance/groups/for-roll', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
     try {
       const g = F.groupForRoll(String((req.body || {}).roll || ''));
@@ -321,8 +306,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect(back(req, '/finance/rosters'));
   }));
 
-  // Tying a group to the War Office muster, from the Rosters page itself.
-  // Posting with nothing ticked unties it and the roster goes back to hand.
   app.post('/finance/groups/:id/muster', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
     const g = F.groupGet(String(req.params.id));
     if (!g) { req.session.flash = { err: true, text: 'No group answers to that.' }; return res.redirect('/finance/rosters'); }
@@ -337,9 +320,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect('/finance/rosters?group=' + encodeURIComponent(g.id));
   }));
 
-  // Bringing a roster in from elsewhere. A paste is read over and shown back
-  // before anything is written down, because a bad paste is easier to stop
-  // than to unpick afterwards.
   app.post('/finance/rosters/import', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
     const b = req.body || {};
     const groupId = String(b.groupId || '');
@@ -388,7 +368,43 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect('/finance/rosters' + (r ? '?group=' + encodeURIComponent(r.groupId) : ''));
   }));
 
-  // ---- Groups and Holds ----
+
+  app.get('/finance/accounts', seeLedger, wrap(async (req, res) => {
+    page(res, req, 'The Accounts', FV.accountsPage(req.user, F.accountsAll(), req.session.csrf, may(req)));
+  }));
+
+  app.post('/finance/accounts', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
+    const b = req.body || {};
+    const values = {};
+    Object.keys(b).forEach(k => { if (k.startsWith('bal_')) values[k.slice(4)] = b[k]; });
+    try {
+      const made = F.bookSetMany(values, b.why, req.user);
+      made.forEach(e => Activity.log(req.user, 'set an account balance', F.groupName(e.groupId), String(e.amount)));
+      req.session.flash = { text: made.length ? `${made.length} ${made.length === 1 ? 'balance is' : 'balances are'} set.` : 'Nothing was changed.' };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/accounts');
+  }));
+
+  app.post('/finance/book/:groupId', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
+    const groupId = String(req.params.groupId);
+    const b = req.body || {};
+    try {
+      const e = F.bookAdd(groupId, String(b.kind || ''), b, req.user);
+      const name = F.groupName(groupId);
+      Activity.log(req.user, e.kind === 'out' ? 'took money out of an account' : e.kind === 'in' ? 'put money into an account' : 'set an account balance', name, String(e.amount) + (e.what ? ' \u2014 ' + e.what : ''));
+      const after = F.bookFor(groupId).balance;
+      const fmt = n => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      req.session.flash = { text: (e.kind === 'out' ? fmt(e.amount) + ' taken out' + (e.what ? ' for ' + e.what : '') : e.kind === 'in' ? fmt(e.amount) + ' put in' : 'The balance is set') + '. ' + name + ' now holds ' + fmt(after) + '.' };
+    } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    res.redirect('/finance/rosters?group=' + encodeURIComponent(groupId));
+  }));
+
+  app.post('/finance/book/line/:id/strike', seeLedger, needManage, checkCsrf, wrap(async (req, res) => {
+    const e = F.bookStrike(String(req.params.id), req.user);
+    if (e) Activity.log(req.user, 'struck an account line', F.groupName(e.groupId), e.what || '');
+    req.session.flash = { text: e ? 'Struck. The balance is put back.' : 'Nothing to strike.' };
+    res.redirect(e ? '/finance/rosters?group=' + encodeURIComponent(e.groupId) : '/finance/accounts');
+  }));
 
   app.get('/finance/settings', seeLedger, wrap(async (req, res) => {
     page(res, req, 'Groups & Holds', FV.settingsPage(req.user, req.session.csrf, may(req)));
@@ -430,7 +446,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
   }));
 
 
-  // ---- Assessments and arrears ----
 
   const mayTax = u => !!u && (u.all || Ranks.can(u, 'fintax'));
   const mayCharter = u => !!u && (u.all || Ranks.can(u, 'fincharter'));
@@ -479,7 +494,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect('/finance/assessments');
   }));
 
-  // ---- Charters ----
 
   app.get('/finance/register', wrap(async (req, res) => {
     const q = String(req.query.q || '').slice(0, 60).toLowerCase();
@@ -510,7 +524,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect('/finance/charters');
   }));
 
-  // ---- The Mint ----
 
   app.get('/finance/mint', seeLedger, wrap(async (req, res) => {
     page(res, req, 'The Imperial Mint', FV.mintPage(req.user, F.mint().slice().reverse(), F.assays().slice().reverse(), F.mintTotals(), req.session.csrf, census(req)));
@@ -540,7 +553,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect('/finance/mint');
   }));
 
-  // ---- Bank logins: the Minister alone ----
 
   app.get('/finance/vault', needMinister, wrap(async (req, res) => {
     page(res, req, 'Bank Logins', FV.vaultPage(req.user, F.vault(), req.session.csrf, String(req.query.show || '')));
@@ -564,7 +576,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect('/finance/vault');
   }));
 
-  // ---- Officers ----
 
   const officersView = (req, res, issued, editing) =>
     page(res, req, 'Officers of Finance', FV.officersPage(req.user, finOfficers(), finRanks(), req.session.csrf, issued, editing, giveable(req.user)));
@@ -637,9 +648,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     }
   }));
 
-  // ---- The summons roll ----
-  // Issuing, serving and referring are the Census & Excise Office's own work,
-  // so they sit behind the same permission as the assessments they arise from.
 
   app.get('/finance/summons', seeLedger, wrap(async (req, res) => {
     const q = String(req.query.q || '').trim().toLowerCase();
@@ -690,7 +698,6 @@ module.exports = (app, { checkCsrf, wrap, back }) => {
     res.redirect(back(req, '/finance/summons'));
   }));
 
-  // ---- The Treasurer's report ----
 
   const reportKeys = () => {
     const ks = F.months().map(m => m.key).sort();

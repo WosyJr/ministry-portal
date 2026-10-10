@@ -75,3 +75,11 @@ ADMIN_USERNAME=nimmi ADMIN_PASSWORD=choose-a-long-password npm start
 - The Gazette drafts itself from the day after the last issue: judgments, warrants and notices from the Bench join notices, sealed papers, appointments and licences. Inquisitions are never gathered.
 - Parties get the line: everything the Bench has written that names them, in order, with gaps marked.
 - `/justice/link.json` carries the Ministry's calendar and, per inquisition, the people it names; the printable papers also answer to `Authorization: Bearer AUDIT_KEY` so PenOc can show them to officers with no Ministry login.
+
+## Accounts kept by hand
+
+Finance › Accounts lists every group's balance; a Finance manager sets any of them and saves at once, with a reason. On a group's Rosters page the account shows one balance with three actions: take money out (what for, amount, for whom, kind), put money in, or set the balance outright. Every line is kept in `finance-book.json` with who, when and the balance after, and can be struck, which puts the balance back. Spending logged on the Spending page and wages paid on People & Wages come off the balance too. When this first runs, each group's old account is carried over as its opening line, and the old month-by-month ledger stays readable beneath it.
+
+## Themes
+
+Night mode defaults to Dusk. Anyone can choose another night scheme at `/themes` (linked from the top bar, the landing page and each officer's Profile). An officer's choice is saved with their account (`prefs.night`) and follows them to any device; a visitor's is kept in the browser. Each scheme is its own file in `public/night/`, loaded only when chosen.
