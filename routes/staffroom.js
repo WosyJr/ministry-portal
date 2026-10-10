@@ -163,11 +163,48 @@ module.exports = function (app, { checkCsrf }) {
 
   const KL = require('../lib/keizaallog');
   const OCR = require('../lib/ocr');
+  const KP = require('../lib/keizaalpull');
   const hostOf = req => String(req.get('host') || '').replace(/[^A-Za-z0-9.:-]/g, '');
   app.get('/province/staff/log', gate, (req, res) => {
     const q = String(req.query.q || '').slice(0, 400000);
-    show(req, res, 'log', SRV.logPage(srv(req), req.session.csrf, q, q ? KL.read(q) : null, { host: hostOf(req) }));
+    show(req, res, 'log', SRV.logPage(srv(req), req.session.csrf, q, q ? KL.read(q) : null, { host: hostOf(req), pullCount: KP.list().length }));
   });
+  const pullTries = new Map();
+  const pullLimited = ip => { const t = Date.now(); const l = (pullTries.get(ip) || []).filter(x => t - x < 600000); if (l.length >= 20) return true; l.push(t); pullTries.set(ip, l); if (pullTries.size > 2000) pullTries.clear(); return false; };
+
+  app.get('/province/staff/log/pulls', gate, (req, res) => {
+    show(req, res, 'log', SRV.pullsPage(srv(req), req.session.csrf, { list: KP.list(), key: KP.keyFor(req.user.username), host: hostOf(req), max: KP.MAX_ITEMS }));
+  });
+  app.post('/province/staff/log/key', gate, checkCsrf, (req, res) => {
+    KP.keyReset(req.user.username);
+    req.session.flash = { text: 'Your pull button is remade. Drag the new one to your bookmarks bar; the old one no longer works.' };
+    res.redirect('/province/staff/log/pulls?server=' + srv(req));
+  });
+  app.post('/province/staff/log/pull', (req, res) => {
+    const b = req.body || {};
+    if (pullLimited(req.ip)) return res.status(429).send('Too many pulls. Give it a few minutes.');
+    const who = KP.userOfKey(b.key);
+    if (!who) return res.status(403).send('That pull button is not known to the Ministry. Open Read a Log, go to Pulls, and drag the button to your bookmarks bar again.');
+    let payload;
+    try { payload = JSON.parse(String(b.payload || '')); } catch (_) { return res.status(400).send('The events did not come across whole.'); }
+    try {
+      const meta = KP.save(who, { items: payload, server: b.server, filters: b.filters, capped: b.capped === '1' });
+      res.redirect('/province/staff/log/pull/' + meta.id + '?server=' + K.serverOf(''));
+    } catch (e) { res.status(400).send(e.message); }
+  });
+  app.get('/province/staff/log/pull/:id', gate, (req, res) => {
+    const id = String(req.params.id).replace(/[^a-z0-9]/gi, '');
+    const out = KP.read(id);
+    if (!out) return next404(req, res);
+    show(req, res, 'log', SRV.logPage(srv(req), req.session.csrf, '', out, { host: hostOf(req), pull: out.pull }));
+  });
+  app.post('/province/staff/log/pull/:id/remove', gate, checkCsrf, (req, res) => {
+    KP.remove(String(req.params.id).replace(/[^a-z0-9]/gi, ''));
+    req.session.flash = { text: 'That pull is struck.' };
+    res.redirect('/province/staff/log/pulls?server=' + srv(req));
+  });
+  const next404 = (req, res) => res.status(404).send('No such pull. It may have been struck, or pushed out by newer ones.');
+
   app.post('/province/staff/log', gate, checkCsrf, async (req, res) => {
     let q = String((req.body || {}).q || '').slice(0, 400000);
     let shot = null;
