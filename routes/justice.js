@@ -801,6 +801,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
       const add = n => { const k = String(n || '').replace(/\s+/g, ' ').trim(); if (k && !seen.has(k.toLowerCase())) seen.set(k.toLowerCase(), k); };
       add(i.into);
       (i.statements || []).forEach(s => add(s.from));
+      (i.suspects || []).forEach(x => { const nm = /^unknown$/i.test(String(x.name || '').trim()) ? '' : x.name; add(nm || x.alias); });
       if (i.caseNo) {
         const c = allCases.find(x => !x.sealed && String(x.no || '').toLowerCase() === String(i.caseNo).toLowerCase());
         if (c) { add(c.accused); add(c.accuser); }
@@ -812,6 +813,7 @@ module.exports = (app, { checkCsrf, wrap }) => {
       commission: !!i.commission, report: !!(i.report && typeof i.report === 'object' && i.report.facts),
       at: i.at, byName: i.byName || '', scope: String(i.scope || '').slice(0, 600), conclusion: String(i.conclusion || '').slice(0, 600),
       lead: J.inqLead(i), suspects: (i.suspects || []).length, evidence: (i.evidence || []).filter(e => !e.withdrawn).length,
+      sheets: (i.suspects || []).map(x => Object.assign({ id: x.id, roman: J.roman(x.n), likeness: !!x.likeness }, Object.fromEntries(J.SUSPECT_FIELDS.map(([k]) => [k, x[k] || ''])))),
       link: '/justice/inquisitions/' + encodeURIComponent(i.id)
     }));
     const notices = J.notices().map(n => ({
