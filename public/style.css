@@ -3080,3 +3080,92 @@ input.cp-amt{font-family:var(--mono);font-weight:600;text-align:right;font-size:
 .cp-tbl th.num,.cp-tbl td.num{text-align:right}
 .cp-tbl td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
 .cp-tbl td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+body.arcane .lgtools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 4px}
+body.arcane .lgshot{cursor:pointer}
+body.arcane .lgmark{font-size:14px;color:var(--afade);max-width:62ch}
+body.arcane .lgmark summary{cursor:pointer;color:var(--arc)}
+body.arcane .lgmark p{margin:8px 0 0}
+body.arcane .lgstrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:18px 0 14px}
+body.arcane .lgstrip .stat{padding:12px 14px;border:1px solid var(--aline);border-radius:4px;background:var(--glass-2)}
+body.arcane .lgstrip .stat b{display:block;font-family:var(--display);font-size:24px;line-height:1.1;color:#fff;font-variant-numeric:tabular-nums}
+body.arcane .lgstrip .stat span{font-size:12.5px;color:var(--afade)}
+body.arcane .lgstrip .stat.warn{border-color:var(--arc-3)}
+body.arcane .lgtabs{display:flex;gap:4px;border-bottom:1px solid var(--aline);margin:6px 0 14px}
+body.arcane .lgtab{font:600 14.5px var(--body);padding:9px 14px;color:var(--afade);background:transparent;border:0;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-1px}
+body.arcane .lgtab small{color:var(--afade);font-weight:400;margin-left:4px}
+body.arcane .lgtab.on{color:#fff;border-bottom-color:var(--arc)}
+body.arcane .lgfilters{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+body.arcane .lgsearch{display:flex;gap:10px;align-items:center}
+body.arcane .lgsearch input{flex:1;min-width:0}
+body.arcane .lgchips{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+body.arcane .lgchips .lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--afade);margin-right:4px}
+body.arcane .lgchip{font:500 13px var(--body);padding:4px 11px;border-radius:999px;border:1px solid var(--aline);background:transparent;color:var(--aink);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+body.arcane .lgchip i{width:8px;height:8px;border-radius:50%;display:inline-block;background:currentColor}
+body.arcane .lgchip.on{background:var(--glass-2);border-color:var(--arc);color:#fff}
+body.arcane .lgchip small{color:var(--afade);font-size:11.5px}
+body.arcane .lgfeed{border:1px solid var(--aline);border-radius:4px;overflow:hidden;background:var(--glass)}
+body.arcane .lgday{padding:7px 16px;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--arc-2);background:var(--glass-2);border-bottom:1px solid var(--aline)}
+body.arcane .lgev{display:grid;grid-template-columns:64px 118px minmax(0,1fr);gap:12px;align-items:start;padding:11px 16px;border-bottom:1px solid var(--aline)}
+body.arcane .lgev:last-child{border-bottom:0}
+body.arcane .lgt{font-family:var(--mono);font-size:12.5px;color:var(--afade);padding-top:4px;font-variant-numeric:tabular-nums}
+body.arcane .lgbadge{display:inline-flex;align-items:center;gap:6px;font:600 11.5px var(--body);padding:4px 9px;border-radius:3px;white-space:nowrap}
+body.arcane .lgbadge i{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+body.arcane .k-combat{color:#F0A37A;background:rgba(240,163,122,.14)}
+body.arcane .k-death{color:#F08A8A;background:rgba(240,138,138,.14)}
+body.arcane .k-session{color:#8FE2A5;background:rgba(143,226,165,.14)}
+body.arcane .k-items{color:#E7C77A;background:rgba(231,199,122,.14)}
+body.arcane .k-chest{color:#F2B05C;background:rgba(242,176,92,.16)}
+body.arcane .k-craft{color:#9FA6F5;background:rgba(159,166,245,.16)}
+body.arcane .k-ore{color:#C8C2D8;background:rgba(200,194,216,.14)}
+body.arcane .k-other{color:var(--afade);background:rgba(167,162,206,.12)}
+body.arcane .lgchip i.k-combat{background:#F0A37A}body.arcane .lgchip i.k-death{background:#F08A8A}body.arcane .lgchip i.k-session{background:#8FE2A5}body.arcane .lgchip i.k-items{background:#E7C77A}body.arcane .lgchip i.k-chest{background:#F2B05C}body.arcane .lgchip i.k-craft{background:#9FA6F5}body.arcane .lgchip i.k-ore{background:#C8C2D8}body.arcane .lgchip i.k-other{background:var(--afade)}
+body.arcane .lgm{min-width:0;display:flex;flex-direction:column;gap:6px}
+body.arcane .lgsaid{margin:0;font-size:16.5px;line-height:1.45}
+body.arcane .lgsaid b{color:#fff;font-weight:600}
+body.arcane .lgwho{color:var(--arc);font-weight:600}
+body.arcane .lgn{font-family:var(--mono);font-size:14px;color:var(--arc-3)}
+body.arcane .lgsub{font-size:13.5px;color:var(--afade);margin:0}
+body.arcane .lgledger{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:2px}
+body.arcane .lgledger>div{border:1px solid var(--aline);border-radius:3px;padding:8px 10px;background:var(--glass-2)}
+body.arcane .lgledger .h{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--afade);margin-bottom:6px}
+body.arcane .lgledger .out .h{color:#F0A37A}
+body.arcane .lgledger .in .h{color:#8FE2A5}
+body.arcane .lgledger ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px;font-size:14px}
+body.arcane .lgledger li{display:flex;justify-content:space-between;gap:10px}
+body.arcane .lgledger li b{font-variant-numeric:tabular-nums;color:#fff;font-weight:600}
+body.arcane .lgledger .empty{color:var(--afade);font-style:italic;font-size:13.5px;margin:0}
+body.arcane .lgmore{font-size:13px}
+body.arcane .lgmore summary{cursor:pointer;color:var(--arc-2);font-size:12.5px;list-style:none;display:inline-flex;gap:6px;align-items:center}
+body.arcane .lgmore summary::-webkit-details-marker{display:none}
+body.arcane .lgmore summary::before{content:"\25B8";font-size:10px}
+body.arcane .lgmore[open] summary::before{content:"\25BE"}
+body.arcane .lgmore dl{margin:8px 0 0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;font-size:13px}
+body.arcane .lgmore dt{font-family:var(--mono);color:var(--afade)}
+body.arcane .lgmore dd{margin:0;color:var(--aink);overflow-wrap:anywhere}
+body.arcane .lgmore dd em{color:var(--afade);font-style:normal}
+body.arcane .lgmore pre{margin:8px 0 0;padding:10px;background:rgba(0,0,0,.35);border:1px solid var(--aline);border-radius:3px;font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--afade);overflow:auto;white-space:pre-wrap;word-break:break-word;max-height:260px}
+body.arcane .lgnone{margin:12px 0 0}
+body.arcane .lgpeople{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+body.arcane .lgperson{border:1px solid var(--aline);border-radius:4px;background:var(--glass-2);padding:14px 16px;display:flex;flex-direction:column;gap:7px}
+body.arcane .lgperson h4{margin:0 0 4px;font-family:var(--display);font-size:20px;color:var(--arc);font-weight:600}
+body.arcane .lgperson .line{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--afade)}
+body.arcane .lgperson .line b{color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+body.arcane .lgperson .moved{font-size:13.5px;color:var(--aink);margin:0}
+body.arcane .lgperson .moved span{color:var(--afade)}
+body.arcane .lgperson .btn{align-self:flex-start;margin-top:4px}
+body.arcane .lgchests{display:flex;flex-direction:column;gap:10px}
+body.arcane .lgchest{display:grid;grid-template-columns:170px minmax(0,1fr);gap:14px;border:1px solid var(--aline);border-radius:4px;background:var(--glass-2);padding:12px 14px;align-items:start}
+body.arcane .lgchest .id{font-family:var(--mono);font-size:13px;color:var(--arc-3)}
+body.arcane .lgchest .id small{display:block;color:var(--afade);font-size:11.5px;margin-top:3px;font-family:var(--body)}
+body.arcane .lgchest ul{margin:0;padding:0;list-style:none;font-size:14px;display:flex;flex-direction:column;gap:3px}
+body.arcane .lgchest li span:first-child{color:var(--afade)}
+body.arcane .neg{color:#F0A37A}
+body.arcane .pos{color:#8FE2A5}
+@media (max-width:760px){
+  body.arcane .lgev{grid-template-columns:56px minmax(0,1fr)}
+  body.arcane .lgev .lgbadge{grid-column:2}
+  body.arcane .lgev .lgm{grid-column:1/-1}
+  body.arcane .lgledger{grid-template-columns:1fr}
+  body.arcane .lgchest{grid-template-columns:1fr}
+}
+body.arcane [hidden]{display:none!important}

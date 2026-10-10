@@ -161,14 +161,24 @@ module.exports = function (app, { checkCsrf }) {
     show(req, res, 'desk', SRV.deskPage(srv(req), K.mayAssign(req.user), req.session.csrf, q, q ? RB.assess(q, srv(req)) : null));
   });
 
-  const GameLog = require('../lib/gamelog');
+  const KL = require('../lib/keizaallog');
+  const OCR = require('../lib/ocr');
+  const hostOf = req => String(req.get('host') || '').replace(/[^A-Za-z0-9.:-]/g, '');
   app.get('/province/staff/log', gate, (req, res) => {
-    const q = String((req.query && req.query.q) || '');
-    show(req, res, 'log', SRV.logPage(srv(req), req.session.csrf, q, q ? GameLog.read(q) : null));
+    const q = String(req.query.q || '').slice(0, 400000);
+    show(req, res, 'log', SRV.logPage(srv(req), req.session.csrf, q, q ? KL.read(q) : null, { host: hostOf(req) }));
   });
-  app.post('/province/staff/log', gate, checkCsrf, (req, res) => {
-    const q = String((req.body || {}).q || '').slice(0, 60000);
-    show(req, res, 'log', SRV.logPage(srv(req), req.session.csrf, q, q ? GameLog.read(q) : null));
+  app.post('/province/staff/log', gate, checkCsrf, async (req, res) => {
+    let q = String((req.body || {}).q || '').slice(0, 400000);
+    let shot = null;
+    const pic = (req.body || {}).shot;
+    if (pic) {
+      try {
+        shot = await OCR.readImage(pic);
+        q = (q.trim() ? q.trim() + '\n' : '') + shot.text;
+      } catch (e) { req.session.flash = { err: true, text: e.message }; }
+    }
+    show(req, res, 'log', SRV.logPage(srv(req), req.session.csrf, q, q.trim() ? KL.read(q) : null, { host: hostOf(req), shot }));
   });
 
   app.get('/province/staff/who', minister, (req, res) =>

@@ -83,3 +83,15 @@ Finance › Payroll lists every group with what it pays its people each week (ad
 ## Themes
 
 Night mode defaults to Dusk. Anyone can choose another night scheme at `/themes` (linked from the top bar, the landing page and each officer's Profile). An officer's choice is saved with their account (`prefs.night`) and follows them to any device; a visitor's is kept in the browser. Each scheme is its own file in `public/night/`, loaded only when chosen.
+
+## Read a Log (Staff Room)
+
+`/province/staff/log` turns the Keizaal admin log into plain sentences. Three ways in:
+
+- **Paste.** Select rows on Keizaal, copy, paste. Day headings ("Today 109") become day markers; JSON blocks attach to the row above them. Click a row on Keizaal first if you want its numbers included.
+- **One click from Keizaal.** The page offers a bookmark button. Drag it to the bookmarks bar; on the Keizaal logs page, click it and the page text comes across and is read out. It hands the text over in the address, so nothing is stored and no password is involved; it only works while signed in here. The button is made for whatever host the Ministry is running on.
+- **A screenshot.** "Or read a screenshot" runs text recognition on the server (`tesseract.js`, English data in `vendor/tessdata/`). Names and actions read well; small digits deserve a second look, and the page says how sure it was. First use after a deploy takes a few seconds longer while the reader warms up; it is let go after five idle minutes.
+
+What comes out: one sentence per event, colour-coded by kind; chest changes as a ledger of what came out and what went in; repeats folded into one row with a count; filters by kind and person, a search box; and tabs for a tally by person and by chest (with a net line per chest). Items are named from the registry, and "What the numbers say" explains each field under the row.
+
+New dependencies: `tesseract.js` and `jimp`. Railway installs them from `package.json`. The reader needs roughly 200 MB of memory while a screenshot is being read.
